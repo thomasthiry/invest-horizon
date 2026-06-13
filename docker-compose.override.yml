@@ -1,0 +1,10 @@
+# Development overrides: run api and db only; use Vite dev server for frontend.
+# Usage: docker-compose up db api  then  cd frontend && npm run dev
+services:
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Cors__Origins__0: http://localhost:5173
+    volumes:
+      - ./backend:/src
+    command: ["dotnet", "watch", "--project", "src/InvestHorizon.Api/InvestHorizon.Api.csproj", "run", "--urls", "http://+:80"]

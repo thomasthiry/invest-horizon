@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: investhorizon
+      POSTGRES_USER: investhorizon
+      POSTGRES_PASSWORD: investhorizon
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U investhorizon"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=investhorizon;Username=investhorizon;Password=investhorizon"
+      Jwt__Key: "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_FOR_PRODUCTION_32CHARS"
+      Jwt__Issuer: investhorizon
+      Seed__UserEmail: admin@investhorizon.local
+      Seed__UserPassword: "Admin1234!"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000:80"
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:

@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F11D2A6B-F027-4751-B83A-56D16BCDCD14}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InvestHorizon.Domain", "src\InvestHorizon.Domain\InvestHorizon.Domain.csproj", "{337DEC58-E4AE-4D58-8DF2-FFB7136F806E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InvestHorizon.Application", "src\InvestHorizon.Application\InvestHorizon.Application.csproj", "{2BF6DFA1-CF59-4CA5-9E28-CF645ED337E1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InvestHorizon.Infrastructure", "src\InvestHorizon.Infrastructure\InvestHorizon.Infrastructure.csproj", "{C9B300AF-B732-494E-9110-3060EA8169F2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InvestHorizon.Api", "src\InvestHorizon.Api\InvestHorizon.Api.csproj", "{092E35C2-931C-4E67-BE21-D57727DA25EC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F2009286-CE99-4AE5-BBED-D7FBAAFF3B11}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InvestHorizon.Tests", "tests\InvestHorizon.Tests\InvestHorizon.Tests.csproj", "{85AE3C71-4E61-45AB-A845-00218BD2940B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{337DEC58-E4AE-4D58-8DF2-FFB7136F806E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{337DEC58-E4AE-4D58-8DF2-FFB7136F806E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{337DEC58-E4AE-4D58-8DF2-FFB7136F806E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{337DEC58-E4AE-4D58-8DF2-FFB7136F806E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BF6DFA1-CF59-4CA5-9E28-CF645ED337E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BF6DFA1-CF59-4CA5-9E28-CF645ED337E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BF6DFA1-CF59-4CA5-9E28-CF645ED337E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BF6DFA1-CF59-4CA5-9E28-CF645ED337E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9B300AF-B732-494E-9110-3060EA8169F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9B300AF-B732-494E-9110-3060EA8169F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9B300AF-B732-494E-9110-3060EA8169F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9B300AF-B732-494E-9110-3060EA8169F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{092E35C2-931C-4E67-BE21-D57727DA25EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{092E35C2-931C-4E67-BE21-D57727DA25EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{092E35C2-931C-4E67-BE21-D57727DA25EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{092E35C2-931C-4E67-BE21-D57727DA25EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{85AE3C71-4E61-45AB-A845-00218BD2940B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{85AE3C71-4E61-45AB-A845-00218BD2940B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{85AE3C71-4E61-45AB-A845-00218BD2940B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{85AE3C71-4E61-45AB-A845-00218BD2940B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{337DEC58-E4AE-4D58-8DF2-FFB7136F806E} = {F11D2A6B-F027-4751-B83A-56D16BCDCD14}
+		{2BF6DFA1-CF59-4CA5-9E28-CF645ED337E1} = {F11D2A6B-F027-4751-B83A-56D16BCDCD14}
+		{C9B300AF-B732-494E-9110-3060EA8169F2} = {F11D2A6B-F027-4751-B83A-56D16BCDCD14}
+		{092E35C2-931C-4E67-BE21-D57727DA25EC} = {F11D2A6B-F027-4751-B83A-56D16BCDCD14}
+		{85AE3C71-4E61-45AB-A845-00218BD2940B} = {F2009286-CE99-4AE5-BBED-D7FBAAFF3B11}
+	EndGlobalSection
+EndGlobal
