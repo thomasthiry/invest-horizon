@@ -48,6 +48,13 @@ export interface Holding {
   openQuantity: number;
   avgCostEur: number;
   totalInvestedEur: number;
+  // Live valuation (null until prices have been refreshed / if a quote is unavailable).
+  currentPriceNative: number | null;
+  priceCurrency: string | null;
+  marketValueEur: number | null;
+  unrealizedGainEur: number | null;
+  priceAsOf: string | null;
+  priceSource: string | null;
 }
 
 export interface CostPreview {

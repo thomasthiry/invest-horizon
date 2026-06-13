@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\InvestHorizon.Domain\InvestHorizon.Domain.csproj" />
     <ProjectReference Include="..\..\src\InvestHorizon.Application\InvestHorizon.Application.csproj" />
+    <ProjectReference Include="..\..\src\InvestHorizon.Infrastructure\InvestHorizon.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

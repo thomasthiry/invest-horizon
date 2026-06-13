@@ -8,11 +8,19 @@ public sealed class HoldingsService
 {
     private readonly ITransactionRepository _transactions;
     private readonly IInstrumentRepository _instruments;
+    private readonly IInstrumentPriceRepository _prices;
+    private readonly IFxRateProvider _fx;
 
-    public HoldingsService(ITransactionRepository transactions, IInstrumentRepository instruments)
+    public HoldingsService(
+        ITransactionRepository transactions,
+        IInstrumentRepository instruments,
+        IInstrumentPriceRepository prices,
+        IFxRateProvider fx)
     {
         _transactions = transactions;
         _instruments = instruments;
+        _prices = prices;
+        _fx = fx;
     }
 
     public async Task<IReadOnlyList<HoldingDto>> GetHoldingsAsync(Guid portfolioId, CancellationToken ct = default)
@@ -20,30 +28,59 @@ public sealed class HoldingsService
         var txs = await _transactions.GetByPortfolioAsync(portfolioId, ct);
         var buyLots = txs.Where(t => t.Side == TransactionSide.Buy && t.RemainingQuantity > 0).ToList();
 
-        var holdings = buyLots
-            .GroupBy(t => t.InstrumentId)
-            .Select(g =>
+        var priceList = await _prices.GetByPortfolioAsync(portfolioId, ct);
+        var pricesByInstrument = priceList.ToDictionary(p => p.InstrumentId);
+
+        var holdings = new List<HoldingDto>();
+        foreach (var g in buyLots.GroupBy(t => t.InstrumentId))
+        {
+            var totalQty = g.Sum(t => t.RemainingQuantity);
+            if (totalQty <= 0) continue;
+
+            var totalCostEur = g.Sum(t => t.TotalCost * (t.RemainingQuantity / t.Quantity));
+            var avgCostEur = totalQty > 0 ? totalCostEur / totalQty : 0m;
+            var first = g.First();
+
+            decimal? currentPriceNative = null;
+            string? priceCurrency = null;
+            decimal? marketValueEur = null;
+            decimal? unrealizedGainEur = null;
+            DateTime? priceAsOf = null;
+            string? priceSource = null;
+
+            if (pricesByInstrument.TryGetValue(g.Key, out var price))
             {
-                var totalQty = g.Sum(t => t.RemainingQuantity);
-                var totalCostEur = g.Sum(t => t.TotalCost * (t.RemainingQuantity / t.Quantity));
-                var avgCostEur = totalQty > 0 ? totalCostEur / totalQty : 0m;
+                currentPriceNative = price.PriceNative;
+                priceCurrency = price.Currency;
+                priceAsOf = price.AsOf;
+                priceSource = price.Source;
 
-                var first = g.First();
-                return new HoldingDto(
-                    InstrumentId: g.Key,
-                    Isin: first.Instrument?.Isin ?? string.Empty,
-                    Name: first.Instrument?.Name ?? string.Empty,
-                    Currency: first.Currency,
-                    OpenQuantity: totalQty,
-                    AvgCostEur: avgCostEur,
-                    TotalInvestedEur: totalCostEur
-                );
-            })
-            .Where(h => h.OpenQuantity > 0)
-            .OrderBy(h => h.Name)
-            .ToList();
+                var eurRate = await _fx.GetEurRateAsync(price.Currency, ct); // 1 EUR = x native
+                if (eurRate > 0)
+                {
+                    marketValueEur = totalQty * price.PriceNative / eurRate;
+                    unrealizedGainEur = marketValueEur - totalCostEur;
+                }
+            }
 
-        return holdings;
+            holdings.Add(new HoldingDto(
+                InstrumentId: g.Key,
+                Isin: first.Instrument?.Isin ?? string.Empty,
+                Name: first.Instrument?.Name ?? string.Empty,
+                Currency: first.Currency,
+                OpenQuantity: totalQty,
+                AvgCostEur: avgCostEur,
+                TotalInvestedEur: totalCostEur,
+                CurrentPriceNative: currentPriceNative,
+                PriceCurrency: priceCurrency,
+                MarketValueEur: marketValueEur,
+                UnrealizedGainEur: unrealizedGainEur,
+                PriceAsOf: priceAsOf,
+                PriceSource: priceSource
+            ));
+        }
+
+        return holdings.OrderBy(h => h.Name).ToList();
     }
 }
 
@@ -54,5 +91,11 @@ public record HoldingDto(
     string Currency,
     decimal OpenQuantity,
     decimal AvgCostEur,
-    decimal TotalInvestedEur
+    decimal TotalInvestedEur,
+    decimal? CurrentPriceNative = null,
+    string? PriceCurrency = null,
+    decimal? MarketValueEur = null,
+    decimal? UnrealizedGainEur = null,
+    DateTime? PriceAsOf = null,
+    string? PriceSource = null
 );

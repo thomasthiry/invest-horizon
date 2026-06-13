@@ -31,6 +31,9 @@ export const transactionsApi = {
   getHoldings: (portfolioId: string) =>
     api.get<Holding[]>(`/portfolios/${portfolioId}/holdings`).then(r => r.data),
 
+  refreshPrices: (portfolioId: string) =>
+    api.post<Holding[]>(`/portfolios/${portfolioId}/holdings/refresh-prices`).then(r => r.data),
+
   getRealized: (portfolioId: string, year: number) =>
     api.get<RealizedGainsReport>(`/portfolios/${portfolioId}/realized`, { params: { year } }).then(r => r.data),
 };

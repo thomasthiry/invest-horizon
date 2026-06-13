@@ -11,5 +11,9 @@ public class Instrument
     public string Currency { get; set; } = "EUR";
     public string? Ticker { get; set; }
 
+    /// <summary>Resolved price-provider symbol (e.g. Yahoo "IWDA.AS"), cached after first lookup to avoid repeated ISIN searches.</summary>
+    public string? PriceSymbol { get; set; }
+
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public InstrumentPrice? LatestPrice { get; set; }
 }

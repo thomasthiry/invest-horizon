@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(dotnet build backend/InvestHorizon.sln -nologo -v q 2>&1)",
+      "Bash(cd /c/Dev/InvestHorizon/frontend && cat package.json | grep -A15 '\"scripts\"')",
+      "Read(//c/c/Dev/InvestHorizon/frontend/**)",
+      "Bash(npx tsc *)",
+      "Read(//c/c/Dev/InvestHorizon/backend/tests/**)"
+    ]
+  }
+}

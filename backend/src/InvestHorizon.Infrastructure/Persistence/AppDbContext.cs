@@ -14,6 +14,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<Instrument> Instruments => Set<Instrument>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<SaleAllocation> SaleAllocations => Set<SaleAllocation>();
+    public DbSet<InstrumentPrice> InstrumentPrices => Set<InstrumentPrice>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -35,7 +36,17 @@ public class AppDbContext : IdentityDbContext<AppUser>
             e.Property(i => i.Name).HasMaxLength(300).IsRequired();
             e.Property(i => i.Currency).HasMaxLength(3).IsRequired();
             e.Property(i => i.Ticker).HasMaxLength(20);
+            e.Property(i => i.PriceSymbol).HasMaxLength(30);
             e.Property(i => i.Type).HasConversion<string>();
+            e.HasOne(i => i.LatestPrice).WithOne(p => p.Instrument).HasForeignKey<InstrumentPrice>(p => p.InstrumentId);
+        });
+
+        builder.Entity<InstrumentPrice>(e =>
+        {
+            e.HasKey(p => p.InstrumentId);
+            e.Property(p => p.PriceNative).HasPrecision(18, 8);
+            e.Property(p => p.Currency).HasMaxLength(3).IsRequired();
+            e.Property(p => p.Source).HasMaxLength(40).IsRequired();
         });
 
         builder.Entity<Transaction>(e =>

@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<TransactionService>();
         services.AddScoped<HoldingsService>();
         services.AddScoped<RealizedGainsService>();
+        services.AddScoped<PriceRefreshService>();
 
         return services;
     }
