@@ -93,7 +93,7 @@ Configurable via environment variables `Seed__UserEmail` / `Seed__UserPassword` 
 # Backend
 cd backend
 dotnet build InvestHorizon.sln
-dotnet test                          # 24 unit tests
+dotnet test                          # 31 unit tests
 dotnet dotnet-ef migrations add <Name> \
   --project src/InvestHorizon.Infrastructure \
   --startup-project src/InvestHorizon.Api \
@@ -213,7 +213,8 @@ All endpoints prefixed `/api`. All except login require `Authorization: Bearer <
 | POST | `/portfolios/{id}/transactions` | Create buy or sell. Engine computes costs; FIFO runs for sells |
 | PUT | `/portfolios/{id}/transactions/{txId}` | Edit custody fee only |
 | POST | `/transactions/preview` | Compute costs without saving. Body: `{ instrumentId, broker, side, unitPrice, quantity, fxRate, manualBrokerFee? }` |
-| GET | `/portfolios/{id}/holdings` | Open positions (FIFO remaining qty, avg cost EUR) |
+| GET | `/portfolios/{id}/holdings` | Open positions with cached market price/value/P&L (null until first refresh) |
+| POST | `/portfolios/{id}/holdings/refresh-prices` | Fetch live quotes from Yahoo Finance for all held instruments; returns enriched holdings |
 | GET | `/portfolios/{id}/realized?year=YYYY` | Realized gains + annual tax report |
 
 **No DELETE endpoints.** Transactions are immutable history; correct via PUT only.
@@ -247,5 +248,5 @@ All endpoints prefixed `/api`. All except login require `Authorization: Bearer <
 - **Manual broker fee override** — `ManualBrokerFee` on a transaction overrides the computed tier (needed for historical data with different fee schedules).
 - **TOB is symmetric** — same rate and cap on buy and sell. The Excel prototype incorrectly hardcoded 0.35% on all sell-side TOB; this implementation uses correct Belgian rates.
 - **Annual cap-gains tax** — the 10% Belgian tax is computed annually with a ~€10,000 exemption and loss offsetting, not per-transaction. The per-sale `RealizedGainEur` on `SaleAllocation` is the pre-tax figure.
-- **Ticker field on Instrument** — reserved for a future market-data price feed (live unrealized P/L). Not used yet.
+- **Live pricing** — `IPriceProvider` / `IFxRateProvider` abstractions in Application; Yahoo Finance (unofficial, no key) is the only implementation. `InstrumentPrice` table caches one row per instrument (upserted on refresh, not immutable history). FX via Frankfurter/ECB API (keyless). `Instrument.PriceSymbol` caches the resolved Yahoo symbol after first ISIN lookup so repeated refreshes skip the search step.
 - **Multi-user data model** — all portfolios are scoped by `UserId`. JWT `sub` claim holds the ASP.NET Identity user ID.
