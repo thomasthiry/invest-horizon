@@ -250,3 +250,19 @@ All endpoints prefixed `/api`. All except login require `Authorization: Bearer <
 - **Annual cap-gains tax** — the 10% Belgian tax is computed annually with a ~€10,000 exemption and loss offsetting, not per-transaction. The per-sale `RealizedGainEur` on `SaleAllocation` is the pre-tax figure.
 - **Live pricing** — `IPriceProvider` / `IFxRateProvider` abstractions in Application; Yahoo Finance (unofficial, no key) is the only implementation. `InstrumentPrice` table caches one row per instrument (upserted on refresh, not immutable history). FX via Frankfurter/ECB API (keyless). `Instrument.PriceSymbol` caches the resolved Yahoo symbol after first ISIN lookup so repeated refreshes skip the search step.
 - **Multi-user data model** — all portfolios are scoped by `UserId`. JWT `sub` claim holds the ASP.NET Identity user ID.
+
+---
+
+## Session discipline
+
+**IMPORTANT: Every session must end by running the full test suite and fixing any failures before closing.**
+
+```bash
+# Backend (must be 31/31 green)
+cd backend && dotnet test
+
+# Frontend type check (must be error-free)
+cd frontend && npx tsc --noEmit
+```
+
+If a test fails due to a change made in the session, either fix the code or update the test — never leave a red suite.

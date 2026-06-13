@@ -31,12 +31,15 @@ public class HoldingsValuationTests
     {
         // 10 shares bought for €1000 total; now $200 each, 1 EUR = 1.25 USD.
         var txs = new ITransactionRepositoryFake([Buy(10m, 1000m, "USD")]);
+        var asOf = new DateTime(2026, 6, 12, 17, 0, 0, DateTimeKind.Utc);
+        var fetchedAt = new DateTime(2026, 6, 13, 9, 42, 0, DateTimeKind.Utc);
         var prices = new IInstrumentPriceRepositoryFake(new InstrumentPrice
         {
             InstrumentId = InstrumentId,
             PriceNative = 200m,
             Currency = "USD",
-            AsOf = new DateTime(2026, 6, 12, 17, 0, 0, DateTimeKind.Utc),
+            AsOf = asOf,
+            FetchedAt = fetchedAt,
             Source = "Yahoo",
         });
         var svc = new HoldingsService(txs, new IInstrumentRepositoryFake(), prices, new FxFake(1.25m));
@@ -50,6 +53,8 @@ public class HoldingsValuationTests
         h.UnrealizedGainEur.Should().BeApproximately(600m, 0.001m);
         h.CurrentPriceNative.Should().Be(200m);
         h.PriceCurrency.Should().Be("USD");
+        h.PriceAsOf.Should().Be(asOf);
+        h.PriceFetchedAt.Should().Be(fetchedAt);
     }
 
     [Fact]
@@ -64,6 +69,7 @@ public class HoldingsValuationTests
         holdings[0].MarketValueEur.Should().BeNull();
         holdings[0].UnrealizedGainEur.Should().BeNull();
         holdings[0].PriceAsOf.Should().BeNull();
+        holdings[0].PriceFetchedAt.Should().BeNull();
     }
 
     [Fact]

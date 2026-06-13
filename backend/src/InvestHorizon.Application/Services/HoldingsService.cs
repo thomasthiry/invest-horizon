@@ -46,6 +46,7 @@ public sealed class HoldingsService
             decimal? marketValueEur = null;
             decimal? unrealizedGainEur = null;
             DateTime? priceAsOf = null;
+            DateTime? priceFetchedAt = null;
             string? priceSource = null;
 
             if (pricesByInstrument.TryGetValue(g.Key, out var price))
@@ -53,6 +54,7 @@ public sealed class HoldingsService
                 currentPriceNative = price.PriceNative;
                 priceCurrency = price.Currency;
                 priceAsOf = price.AsOf;
+                priceFetchedAt = price.FetchedAt;
                 priceSource = price.Source;
 
                 var eurRate = await _fx.GetEurRateAsync(price.Currency, ct); // 1 EUR = x native
@@ -76,6 +78,7 @@ public sealed class HoldingsService
                 MarketValueEur: marketValueEur,
                 UnrealizedGainEur: unrealizedGainEur,
                 PriceAsOf: priceAsOf,
+                PriceFetchedAt: priceFetchedAt,
                 PriceSource: priceSource
             ));
         }
@@ -97,5 +100,6 @@ public record HoldingDto(
     decimal? MarketValueEur = null,
     decimal? UnrealizedGainEur = null,
     DateTime? PriceAsOf = null,
+    DateTime? PriceFetchedAt = null,
     string? PriceSource = null
 );

@@ -37,12 +37,15 @@ export function HoldingsPage({ portfolioId }: Props) {
   const totalMarketValue = data.reduce((s, h) => s + (h.marketValueEur ?? 0), 0);
   const totalUnrealized = data.reduce((s, h) => s + (h.unrealizedGainEur ?? 0), 0);
 
-  const priced = data.filter(h => h.priceAsOf);
+  const priced = data.filter(h => h.priceFetchedAt);
   const anyMissing = data.some(h => h.marketValueEur == null);
+  const oldestFetchedAt = priced.length > 0
+    ? priced.reduce((min, h) => (h.priceFetchedAt! < min ? h.priceFetchedAt! : min), priced[0].priceFetchedAt!)
+    : null;
   const oldestAsOf = priced.length > 0
     ? priced.reduce((min, h) => (h.priceAsOf! < min ? h.priceAsOf! : min), priced[0].priceAsOf!)
     : null;
-  const isStale = oldestAsOf == null || (Date.now() - new Date(oldestAsOf).getTime() > STALE_AFTER_MS);
+  const isStale = oldestFetchedAt == null || (Date.now() - new Date(oldestFetchedAt).getTime() > STALE_AFTER_MS);
 
   return (
     <Stack>
@@ -61,15 +64,15 @@ export function HoldingsPage({ portfolioId }: Props) {
 
       <Alert
         data-testid="prices-asof"
-        color={oldestAsOf == null ? 'gray' : isStale ? 'yellow' : 'green'}
+        color={oldestFetchedAt == null ? 'gray' : isStale ? 'yellow' : 'green'}
         variant="light"
         py="xs"
       >
         {refresh.isError
           ? 'Could not refresh prices — showing last known values.'
-          : oldestAsOf == null
+          : oldestFetchedAt == null
             ? 'No live prices yet — click "Refresh prices" to value this portfolio.'
-            : `Prices as of ${formatDateTime(oldestAsOf)}${isStale ? ' — may be outdated' : ''}${anyMissing ? ' · some positions have no quote' : ''}`}
+            : `Last refreshed: ${formatDateTime(oldestFetchedAt)}${oldestAsOf ? ` · Market data from ${formatDateTime(oldestAsOf)}` : ''}${isStale ? ' — may be outdated' : ''}${anyMissing ? ' · some positions have no quote' : ''}`}
       </Alert>
 
       <Table striped highlightOnHover withTableBorder>

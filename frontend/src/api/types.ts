@@ -54,6 +54,7 @@ export interface Holding {
   marketValueEur: number | null;
   unrealizedGainEur: number | null;
   priceAsOf: string | null;
+  priceFetchedAt: string | null;
   priceSource: string | null;
 }
 
