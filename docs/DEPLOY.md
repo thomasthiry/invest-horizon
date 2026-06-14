@@ -7,7 +7,7 @@ and advertises its hostname via environment variables (same pattern as `thermocr
 
 - **Subdomain:** `https://investhorizon.evolve11.com`
 - **Registry:** Docker Hub — `thomasthiry/investhorizon-api`, `thomasthiry/investhorizon-web`
-- **Images built by:** GitHub Actions (`.github/workflows/release.yml`)
+- **Images built by:** GitHub Actions (`.github/workflows/ci.yml`)
 
 ---
 
@@ -57,9 +57,10 @@ EF Core migrations and the user seeder run automatically on `api` startup.
 
 ## Releasing a new version
 
-1. Merge to `master`. The `release.yml` workflow builds and pushes both images to Docker Hub,
-   tagged with a date-based version like `2026-06-14.3` (plus `latest`). The tag is printed in
-   the Actions run summary. *(Requires repo secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.)*
+1. Push to `master`. The `ci.yml` workflow runs the backend + frontend tests first, and **only if
+   they pass** builds and pushes both images to Docker Hub, tagged with a date-based version like
+   `2026-06-14.3` (plus `latest`). The tag is printed in the Actions run summary.
+   *(Requires repo secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.)*
 
 2. On the server, set `investhorizon_image_tag` in `.env` to that tag (pin it — avoid `latest`
    in production so rollbacks are deterministic), then:

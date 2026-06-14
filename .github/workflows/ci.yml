@@ -1,10 +1,18 @@
-name: CI
+name: CI/CD
 
+# Pushes to master run the tests first; images are built & pushed only if tests pass.
+# Pull requests run the tests only. Manual runs (workflow_dispatch) also gate on tests.
 on:
   push:
     branches: [master]
   pull_request:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag (defaults to YYYY-MM-DD.<run_number>)'
+        required: false
+        type: string
 
 jobs:
   backend:
@@ -41,3 +49,56 @@ jobs:
         run: npx tsc --noEmit
       - name: Build
         run: npm run build
+
+  build-and-push:
+    name: Build & push to Docker Hub
+    needs: [backend, frontend]
+    # Skip on pull requests — only publish images on master pushes and manual runs.
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute image tag
+        id: meta
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=$(date +%Y-%m-%d).${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push api
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            thomasthiry/investhorizon-api:${{ steps.meta.outputs.tag }}
+            thomasthiry/investhorizon-api:latest
+
+      - name: Build & push web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            thomasthiry/investhorizon-web:${{ steps.meta.outputs.tag }}
+            thomasthiry/investhorizon-web:latest
+
+      - name: Summary
+        run: |
+          echo "Pushed images with tag **${{ steps.meta.outputs.tag }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- thomasthiry/investhorizon-api:${{ steps.meta.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- thomasthiry/investhorizon-web:${{ steps.meta.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
