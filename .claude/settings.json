@@ -7,5 +7,20 @@
       "Bash(npx tsc *)",
       "Read(//c/c/Dev/InvestHorizon/backend/tests/**)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "$dirty = git status --porcelain -- backend/ frontend/src/; if ($dirty) { Set-Location 'c:\\Dev\\InvestHorizon\\backend'; dotnet test; $b = $LASTEXITCODE; Set-Location 'c:\\Dev\\InvestHorizon\\frontend'; npx tsc --noEmit; $f = $LASTEXITCODE; exit ([Math]::Max($b, $f)) }",
+            "timeout": 300,
+            "statusMessage": "Running test suite..."
+          }
+        ]
+      }
+    ]
   }
 }
