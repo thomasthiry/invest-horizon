@@ -11,6 +11,7 @@ import { recommendationsApi } from '../api/recommendations';
 import { instrumentsApi } from '../api/instruments';
 import type { Recommendation, RecommendationRating } from '../api/types';
 
+
 const RATING_OPTIONS = [
   { value: 'Buy', label: 'Buy' },
   { value: 'Accumulate', label: 'Accumulate' },
@@ -34,8 +35,6 @@ function pct(v: number) {
 export function RecommendationsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Recommendation | null>(null);
-  const [filterInstrument, setFilterInstrument] = useState<string | null>(null);
-  const [filterSource, setFilterSource] = useState('');
   const qc = useQueryClient();
 
   const { data: instruments = [] } = useQuery({
@@ -49,11 +48,8 @@ export function RecommendationsPage() {
   });
 
   const { data: recommendations, isLoading, error } = useQuery({
-    queryKey: ['recommendations', filterInstrument, filterSource],
-    queryFn: () => recommendationsApi.getAll({
-      instrumentId: filterInstrument ?? undefined,
-      source: filterSource || undefined,
-    }),
+    queryKey: ['recommendations'],
+    queryFn: () => recommendationsApi.getAll({}),
   });
 
   const { data: scorecard = [] } = useQuery({
@@ -140,25 +136,6 @@ export function RecommendationsPage() {
       <Group justify="space-between">
         <Title order={3}>Recommendations</Title>
         <Button size="sm" onClick={openAdd}>+ Add</Button>
-      </Group>
-
-      <Group>
-        <Select
-          placeholder="Filter by security"
-          data={instruments.map(i => ({ value: i.id, label: `${i.name} (${i.isin})` }))}
-          searchable
-          clearable
-          value={filterInstrument}
-          onChange={setFilterInstrument}
-          style={{ minWidth: 260 }}
-        />
-        <Autocomplete
-          placeholder="Filter by source"
-          data={sources}
-          value={filterSource}
-          onChange={setFilterSource}
-          style={{ minWidth: 180 }}
-        />
       </Group>
 
       <Tabs defaultValue="list">
