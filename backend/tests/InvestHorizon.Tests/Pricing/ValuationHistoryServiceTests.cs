@@ -240,9 +240,13 @@ public class ValuationHistoryServiceTests
         public Task<Transaction?> GetByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<Transaction?>(null);
         public Task<IReadOnlyList<Transaction>> GetOpenBuyLotsAsync(Guid portfolioId, Guid instrumentId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Transaction>>([]);
         public Task<IReadOnlyList<SaleAllocation>> GetAllocationsAsync(Guid portfolioId, int? year, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<SaleAllocation>>([]);
+        public Task<IReadOnlyList<Transaction>> GetByPortfolioAndInstrumentAsync(Guid portfolioId, Guid instrumentId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Transaction>>(txs.Where(t => t.PortfolioId == portfolioId && t.InstrumentId == instrumentId).ToList());
+        public Task RemoveAllocationsForSellsAsync(IEnumerable<Guid> sellTransactionIds, CancellationToken ct = default) => Task.CompletedTask;
         public Task AddAsync(Transaction transaction, CancellationToken ct = default) => Task.CompletedTask;
         public Task AddAllocationsAsync(IEnumerable<SaleAllocation> allocations, CancellationToken ct = default) => Task.CompletedTask;
         public Task UpdateAsync(Transaction transaction, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(Transaction transaction, CancellationToken ct = default) => Task.CompletedTask;
         public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 

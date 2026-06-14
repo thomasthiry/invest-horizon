@@ -37,6 +37,7 @@ export interface Transaction {
   totalCost: number;
   netProceeds: number;
   custodyFee: number | null;
+  manualBrokerFee: number | null;
   remainingQuantity: number;
 }
 

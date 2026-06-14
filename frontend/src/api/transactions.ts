@@ -18,6 +18,22 @@ export const transactionsApi = {
     manualBrokerFee?: number;
   }) => api.post<Transaction>(`/portfolios/${portfolioId}/transactions`, data).then(r => r.data),
 
+  update: (portfolioId: string, id: string, data: {
+    instrumentId: string;
+    broker: Broker;
+    side: TransactionSide;
+    date: string;
+    unitPrice: number;
+    quantity: number;
+    currency: string;
+    fxRate: number;
+    custodyFee?: number;
+    manualBrokerFee?: number;
+  }) => api.put<Transaction>(`/portfolios/${portfolioId}/transactions/${id}`, data).then(r => r.data),
+
+  remove: (portfolioId: string, id: string) =>
+    api.delete(`/portfolios/${portfolioId}/transactions/${id}`),
+
   preview: (data: {
     instrumentId: string;
     broker: Broker;

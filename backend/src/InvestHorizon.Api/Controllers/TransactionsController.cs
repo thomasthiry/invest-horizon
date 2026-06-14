@@ -53,13 +53,32 @@ public class TransactionsController : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid portfolioId, Guid id, [FromBody] UpdateTransactionRequest req, CancellationToken ct)
     {
-        var tx = await _transactions.GetByIdAsync(id, ct);
-        if (tx is null || tx.PortfolioId != portfolioId) return NotFound();
+        try
+        {
+            var tx = await _service.UpdateAsync(
+                portfolioId, UserId, id,
+                req.InstrumentId, req.Broker, req.Side,
+                DateOnly.Parse(req.Date),
+                req.UnitPrice, req.Quantity,
+                req.Currency, req.FxRate,
+                req.CustodyFee, req.ManualBrokerFee,
+                ct);
+            return Ok(ToDto(tx));
+        }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
 
-        tx.CustodyFee = req.CustodyFee;
-        await _transactions.UpdateAsync(tx, ct);
-        await _transactions.SaveChangesAsync(ct);
-        return Ok(ToDto(tx));
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid portfolioId, Guid id, CancellationToken ct)
+    {
+        try
+        {
+            await _service.DeleteAsync(portfolioId, UserId, id, ct);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     private static TransactionDto ToDto(Domain.Entities.Transaction t) => new(
@@ -70,7 +89,7 @@ public class TransactionsController : ControllerBase
         t.UnitPrice, t.Quantity, t.Currency, t.FxRate,
         t.AmountNative, t.AmountEur,
         t.BrokerFee, t.TobAmount, t.TotalCost, t.NetProceeds,
-        t.CustodyFee, t.RemainingQuantity
+        t.CustodyFee, t.ManualBrokerFee, t.RemainingQuantity
     );
 }
 
@@ -117,7 +136,18 @@ public record CreateTransactionRequest(
     decimal? ManualBrokerFee
 );
 
-public record UpdateTransactionRequest(decimal? CustodyFee);
+public record UpdateTransactionRequest(
+    Guid InstrumentId,
+    Broker Broker,
+    TransactionSide Side,
+    string Date,
+    decimal UnitPrice,
+    decimal Quantity,
+    string Currency,
+    decimal FxRate,
+    decimal? CustodyFee,
+    decimal? ManualBrokerFee
+);
 
 public record PreviewRequest(
     Guid InstrumentId,
@@ -149,5 +179,6 @@ public record TransactionDto(
     decimal TotalCost,
     decimal NetProceeds,
     decimal? CustodyFee,
+    decimal? ManualBrokerFee,
     decimal RemainingQuantity
 );

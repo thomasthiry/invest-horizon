@@ -39,6 +39,23 @@ public sealed class TransactionRepository : ITransactionRepository
         return await query.ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Transaction>> GetByPortfolioAndInstrumentAsync(Guid portfolioId, Guid instrumentId, CancellationToken ct = default)
+        => await _db.Transactions
+            .Include(t => t.Instrument)
+            .Where(t => t.PortfolioId == portfolioId && t.InstrumentId == instrumentId)
+            .OrderBy(t => t.Date)
+            .ThenBy(t => t.Id)
+            .ToListAsync(ct);
+
+    public async Task RemoveAllocationsForSellsAsync(IEnumerable<Guid> sellTransactionIds, CancellationToken ct = default)
+    {
+        var ids = sellTransactionIds.ToList();
+        var allocations = await _db.SaleAllocations
+            .Where(a => ids.Contains(a.SellTransactionId))
+            .ToListAsync(ct);
+        _db.SaleAllocations.RemoveRange(allocations);
+    }
+
     public async Task AddAsync(Transaction transaction, CancellationToken ct = default)
         => await _db.Transactions.AddAsync(transaction, ct);
 
@@ -48,6 +65,12 @@ public sealed class TransactionRepository : ITransactionRepository
     public Task UpdateAsync(Transaction transaction, CancellationToken ct = default)
     {
         _db.Transactions.Update(transaction);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(Transaction transaction, CancellationToken ct = default)
+    {
+        _db.Transactions.Remove(transaction);
         return Task.CompletedTask;
     }
 

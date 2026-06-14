@@ -8,14 +8,16 @@ import { DateInput } from '@mantine/dates';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { transactionsApi } from '../api/transactions';
 import { instrumentsApi } from '../api/instruments';
-import type { Broker, CostPreview, TransactionSide } from '../api/types';
+import type { Broker, CostPreview, Transaction, TransactionSide } from '../api/types';
 
 interface Props {
   portfolioId: string;
+  transaction?: Transaction;
   onSuccess?: () => void;
 }
 
-export function TransactionForm({ portfolioId, onSuccess }: Props) {
+export function TransactionForm({ portfolioId, transaction, onSuccess }: Props) {
+  const isEdit = !!transaction;
   const qc = useQueryClient();
   const [preview, setPreview] = useState<CostPreview | null>(null);
   const [previewError, setPreviewError] = useState('');
@@ -25,19 +27,23 @@ export function TransactionForm({ portfolioId, onSuccess }: Props) {
     queryFn: instrumentsApi.getAll,
   });
 
+  const hasManualFee = transaction
+    ? transaction.manualBrokerFee != null
+    : false;
+
   const form = useForm({
     initialValues: {
-      instrumentId: '',
-      broker: 'Keytrade' as Broker,
-      side: 'Buy' as TransactionSide,
-      date: new Date(),
-      unitPrice: 0,
-      quantity: 1,
-      currency: 'EUR',
-      fxRate: 1,
-      custodyFee: undefined as number | undefined,
-      manualBrokerFee: undefined as number | undefined,
-      useManualFee: false,
+      instrumentId: transaction?.instrumentId ?? '',
+      broker: (transaction?.broker ?? 'Keytrade') as Broker,
+      side: (transaction?.side ?? 'Buy') as TransactionSide,
+      date: transaction?.date ?? new Date().toISOString().substring(0, 10),
+      unitPrice: transaction?.unitPrice ?? 0,
+      quantity: transaction?.quantity ?? 1,
+      currency: transaction?.currency ?? 'EUR',
+      fxRate: transaction?.fxRate ?? 1,
+      custodyFee: transaction?.custodyFee ?? undefined as number | undefined,
+      manualBrokerFee: transaction?.manualBrokerFee ?? undefined as number | undefined,
+      useManualFee: hasManualFee,
     },
   });
 
@@ -74,31 +80,39 @@ export function TransactionForm({ portfolioId, onSuccess }: Props) {
   ]);
 
   const mutation = useMutation({
-    mutationFn: (values: typeof form.values) =>
-      transactionsApi.create(portfolioId, {
+    mutationFn: (values: typeof form.values) => {
+      const payload = {
         instrumentId: values.instrumentId,
         broker: values.broker,
         side: values.side,
-        date: values.date.toISOString().substring(0, 10),
+        date: values.date,
         unitPrice: values.unitPrice,
         quantity: values.quantity,
         currency: values.currency,
         fxRate: values.fxRate,
         custodyFee: values.custodyFee,
         manualBrokerFee: values.useManualFee ? values.manualBrokerFee : undefined,
-      }),
+      };
+      return isEdit
+        ? transactionsApi.update(portfolioId, transaction!.id, payload)
+        : transactionsApi.create(portfolioId, payload);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions', portfolioId] });
       qc.invalidateQueries({ queryKey: ['holdings', portfolioId] });
-      form.reset();
-      setPreview(null);
+      qc.invalidateQueries({ queryKey: ['realized', portfolioId] });
+      qc.invalidateQueries({ queryKey: ['valuation-history', portfolioId] });
+      if (!isEdit) {
+        form.reset();
+        setPreview(null);
+      }
       onSuccess?.();
     },
   });
 
   return (
     <Paper shadow="xs" p="md">
-      <Title order={4} mb="md">Add Transaction</Title>
+      <Title order={4} mb="md">{isEdit ? 'Edit Transaction' : 'Add Transaction'}</Title>
       <form onSubmit={form.onSubmit(values => mutation.mutate(values))}>
         <Stack>
           <Group grow>
@@ -231,9 +245,13 @@ export function TransactionForm({ portfolioId, onSuccess }: Props) {
             </>
           )}
 
-          {mutation.isError && <Alert color="red">Failed to save transaction.</Alert>}
+          {mutation.isError && (
+            <Alert color="red">
+              {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to save transaction.'}
+            </Alert>
+          )}
           <Button type="submit" loading={mutation.isPending} data-testid="submit-transaction">
-            Save Transaction
+            {isEdit ? 'Update Transaction' : 'Save Transaction'}
           </Button>
         </Stack>
       </form>
