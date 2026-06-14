@@ -6,8 +6,6 @@ export interface CreateRecommendationData {
   source: string;
   rating: RecommendationRating;
   date: string;
-  targetPrice?: number;
-  url?: string;
   comment?: string;
 }
 
@@ -15,8 +13,6 @@ export interface UpdateRecommendationData {
   source: string;
   rating: RecommendationRating;
   date: string;
-  targetPrice?: number;
-  url?: string;
   comment?: string;
 }
 

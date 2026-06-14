@@ -30,8 +30,7 @@ public class RecommendationsController : ControllerBase
         {
             var rec = await _service.CreateAsync(
                 UserId, req.InstrumentId, req.Source,
-                req.Rating, DateOnly.Parse(req.Date),
-                req.TargetPrice, req.Url, req.Comment, ct);
+                req.Rating, DateOnly.Parse(req.Date), req.Comment, ct);
             return CreatedAtAction(nameof(GetAll), null, ToSingleDto(rec));
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -44,8 +43,7 @@ public class RecommendationsController : ControllerBase
         {
             var rec = await _service.UpdateAsync(
                 id, UserId, req.Source,
-                req.Rating, DateOnly.Parse(req.Date),
-                req.TargetPrice, req.Url, req.Comment, ct);
+                req.Rating, DateOnly.Parse(req.Date), req.Comment, ct);
             return Ok(ToSingleDto(rec));
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -86,8 +84,6 @@ public class RecommendationsController : ControllerBase
         r.Recommendation.Source,
         r.Recommendation.Rating,
         r.Recommendation.Date.ToString("yyyy-MM-dd"),
-        r.Recommendation.TargetPrice,
-        r.Recommendation.Url,
         r.Recommendation.Comment,
         r.Recommendation.CreatedAt,
         r.Evaluation is null ? null : new RecommendationEvaluationDto(
@@ -95,14 +91,13 @@ public class RecommendationsController : ControllerBase
             r.Evaluation.CurrentPrice,
             r.Evaluation.ReturnSince,
             r.Evaluation.DirectionallyCorrect,
-            r.Evaluation.PerformanceScore,
-            r.Evaluation.TargetReached)
+            r.Evaluation.PerformanceScore)
     );
 
     private static RecommendationDto ToSingleDto(Domain.Entities.Recommendation r) => new(
         r.Id, r.InstrumentId, r.Instrument?.Isin, r.Instrument?.Name,
         r.Source, r.Rating, r.Date.ToString("yyyy-MM-dd"),
-        r.TargetPrice, r.Url, r.Comment, r.CreatedAt, null);
+        r.Comment, r.CreatedAt, null);
 }
 
 public record CreateRecommendationRequest(
@@ -110,8 +105,6 @@ public record CreateRecommendationRequest(
     string Source,
     RecommendationRating Rating,
     string Date,
-    decimal? TargetPrice,
-    string? Url,
     string? Comment
 );
 
@@ -119,8 +112,6 @@ public record UpdateRecommendationRequest(
     string Source,
     RecommendationRating Rating,
     string Date,
-    decimal? TargetPrice,
-    string? Url,
     string? Comment
 );
 
@@ -132,8 +123,6 @@ public record RecommendationDto(
     string Source,
     RecommendationRating Rating,
     string Date,
-    decimal? TargetPrice,
-    string? Url,
     string? Comment,
     DateTime CreatedAt,
     RecommendationEvaluationDto? Evaluation
@@ -144,6 +133,5 @@ public record RecommendationEvaluationDto(
     decimal CurrentPrice,
     decimal ReturnSince,
     bool? DirectionallyCorrect,
-    double PerformanceScore,
-    bool? TargetReached
+    double PerformanceScore
 );

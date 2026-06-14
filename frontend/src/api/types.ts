@@ -108,7 +108,6 @@ export interface RecommendationEvaluation {
   returnSince: number;
   directionallyCorrect: boolean | null;
   performanceScore: number;
-  targetReached: boolean | null;
 }
 
 export interface Recommendation {
@@ -119,8 +118,6 @@ export interface Recommendation {
   source: string;
   rating: RecommendationRating;
   date: string;
-  targetPrice: number | null;
-  url: string | null;
   comment: string | null;
   createdAt: string;
   evaluation: RecommendationEvaluation | null;

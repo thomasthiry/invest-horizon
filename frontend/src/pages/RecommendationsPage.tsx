@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Table, Title, Stack, Alert, Loader, Button, Group, Modal, TextInput,
-  Select, Text, NumberInput, Textarea, Autocomplete, Badge, ActionIcon,
+  Table, Title, Stack, Alert, Loader, Button, Group, Modal,
+  Select, Text, Textarea, Autocomplete, Badge, ActionIcon,
   Tabs, Tooltip
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
@@ -67,8 +67,6 @@ export function RecommendationsPage() {
       source: '',
       rating: 'Buy' as RecommendationRating,
       date: new Date().toISOString().substring(0, 10) as string | Date,
-      targetPrice: undefined as number | undefined,
-      url: '',
       comment: '',
     },
   });
@@ -86,8 +84,6 @@ export function RecommendationsPage() {
       source: rec.source,
       rating: rec.rating,
       date: rec.date,
-      targetPrice: rec.targetPrice ?? undefined,
-      url: rec.url ?? '',
       comment: rec.comment ?? '',
     });
     setModalOpen(true);
@@ -112,8 +108,6 @@ export function RecommendationsPage() {
           source: values.source,
           rating: values.rating,
           date: dateStr,
-          targetPrice: values.targetPrice,
-          url: values.url || undefined,
           comment: values.comment || undefined,
         });
       }
@@ -122,8 +116,6 @@ export function RecommendationsPage() {
         source: values.source,
         rating: values.rating,
         date: dateStr,
-        targetPrice: values.targetPrice,
-        url: values.url || undefined,
         comment: values.comment || undefined,
       });
     },
@@ -189,7 +181,6 @@ export function RecommendationsPage() {
                   <Table.Th>Security</Table.Th>
                   <Table.Th>Source</Table.Th>
                   <Table.Th>Rating</Table.Th>
-                  <Table.Th>Target</Table.Th>
                   <Table.Th>Return since</Table.Th>
                   <Table.Th>Correct?</Table.Th>
                   <Table.Th>Comment</Table.Th>
@@ -209,9 +200,6 @@ export function RecommendationsPage() {
                       <Badge color={RATING_COLORS[r.rating]} variant="light">
                         {RATING_OPTIONS.find(o => o.value === r.rating)?.label ?? r.rating}
                       </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      {r.targetPrice != null ? r.targetPrice.toFixed(2) : '—'}
                     </Table.Td>
                     <Table.Td>
                       {r.evaluation
@@ -336,24 +324,11 @@ export function RecommendationsPage() {
                 {...form.getInputProps('rating')}
               />
             </Group>
-            <Group grow>
-              <DateInput
-                label="Date"
-                required
-                valueFormat="YYYY-MM-DD"
-                {...form.getInputProps('date')}
-              />
-              <NumberInput
-                label="Target price (optional)"
-                decimalScale={4}
-                min={0}
-                {...form.getInputProps('targetPrice')}
-              />
-            </Group>
-            <TextInput
-              label="URL (optional)"
-              placeholder="https://..."
-              {...form.getInputProps('url')}
+            <DateInput
+              label="Date"
+              required
+              valueFormat="YYYY-MM-DD"
+              {...form.getInputProps('date')}
             />
             <Textarea
               label="Comment / rationale"

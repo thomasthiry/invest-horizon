@@ -104,8 +104,6 @@ public class AppDbContext : IdentityDbContext<AppUser>
             e.Property(r => r.UserId).IsRequired();
             e.Property(r => r.Source).HasMaxLength(200).IsRequired();
             e.Property(r => r.Rating).HasConversion<string>();
-            e.Property(r => r.TargetPrice).HasPrecision(18, 8);
-            e.Property(r => r.Url).HasMaxLength(2000);
             e.Property(r => r.Comment).HasMaxLength(4000);
             e.HasIndex(r => new { r.UserId, r.InstrumentId });
             e.HasOne(r => r.Instrument).WithMany(i => i.Recommendations).HasForeignKey(r => r.InstrumentId);

@@ -22,8 +22,7 @@ public sealed class RecommendationService
 
     public async Task<Recommendation> CreateAsync(
         string userId, Guid instrumentId, string source,
-        RecommendationRating rating, DateOnly date,
-        decimal? targetPrice, string? url, string? comment,
+        RecommendationRating rating, DateOnly date, string? comment,
         CancellationToken ct = default)
     {
         var rec = new Recommendation
@@ -34,8 +33,6 @@ public sealed class RecommendationService
             Source = source,
             Rating = rating,
             Date = date,
-            TargetPrice = targetPrice,
-            Url = url,
             Comment = comment,
             CreatedAt = DateTime.UtcNow
         };
@@ -46,8 +43,7 @@ public sealed class RecommendationService
 
     public async Task<Recommendation> UpdateAsync(
         Guid id, string userId, string source,
-        RecommendationRating rating, DateOnly date,
-        decimal? targetPrice, string? url, string? comment,
+        RecommendationRating rating, DateOnly date, string? comment,
         CancellationToken ct = default)
     {
         var rec = await _recommendations.GetByIdAsync(id, ct)
@@ -58,8 +54,6 @@ public sealed class RecommendationService
         rec.Source = source;
         rec.Rating = rating;
         rec.Date = date;
-        rec.TargetPrice = targetPrice;
-        rec.Url = url;
         rec.Comment = comment;
 
         await _recommendations.SaveChangesAsync(ct);
@@ -122,19 +116,7 @@ public sealed class RecommendationService
 
         double performanceScore = signal * (double)returnSince;
 
-        bool? targetReached = null;
-        if (rec.TargetPrice.HasValue && rec.TargetPrice.Value > 0)
-        {
-            var fullHistory = await _priceHistory.GetRangeAsync(
-                rec.InstrumentId, rec.Date, DateOnly.FromDateTime(DateTime.UtcNow), ct);
-
-            if (signal > 0)
-                targetReached = fullHistory.Any(p => p.CloseNative >= rec.TargetPrice.Value);
-            else if (signal < 0)
-                targetReached = fullHistory.Any(p => p.CloseNative <= rec.TargetPrice.Value);
-        }
-
-        return new RecommendationEvaluation(recPrice, currentPrice, returnSince, directionallyCorrect, performanceScore, targetReached);
+        return new RecommendationEvaluation(recPrice, currentPrice, returnSince, directionallyCorrect, performanceScore);
     }
 
     public async Task<IReadOnlyList<SourceScorecard>> GetScorecardAsync(string userId, CancellationToken ct = default)
@@ -160,13 +142,7 @@ public sealed class RecommendationService
                     ? null
                     : evaluated.Average(r => r.Evaluation!.PerformanceScore);
 
-                return new SourceScorecard(
-                    g.Key,
-                    g.Count(),
-                    evaluated.Count,
-                    hitRate,
-                    avgReturn,
-                    avgScore);
+                return new SourceScorecard(g.Key, g.Count(), evaluated.Count, hitRate, avgReturn, avgScore);
             })
             .OrderBy(s => s.Source)
             .ToList();
@@ -178,8 +154,7 @@ public record RecommendationEvaluation(
     decimal CurrentPrice,
     decimal ReturnSince,
     bool? DirectionallyCorrect,
-    double PerformanceScore,
-    bool? TargetReached
+    double PerformanceScore
 );
 
 public record RecommendationWithEvaluation(

@@ -20,7 +20,7 @@ public class RecommendationEvaluationTests
             new StubPriceRepository(latestPrice));
     }
 
-    private static Recommendation Rec(RecommendationRating rating, DateOnly date, decimal? target = null) => new()
+    private static Recommendation Rec(RecommendationRating rating, DateOnly date) => new()
     {
         Id = Guid.NewGuid(),
         UserId = "u1",
@@ -28,7 +28,6 @@ public class RecommendationEvaluationTests
         Source = "TestSource",
         Rating = rating,
         Date = date,
-        TargetPrice = target,
         CreatedAt = DateTime.UtcNow,
     };
 
@@ -99,45 +98,6 @@ public class RecommendationEvaluationTests
         var eval = await svc.EvaluateAsync(Rec(RecommendationRating.Buy, new DateOnly(2024, 1, 2)));
 
         eval.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task TargetReached_Bullish_DetectedCorrectly()
-    {
-        var d0 = new DateOnly(2024, 1, 2);
-        var history = new[]
-        {
-            Point(d0, 100m),
-            Point(d0.AddDays(10), 110m),
-            Point(d0.AddDays(20), 125m),
-            Point(d0.AddDays(30), 120m),
-        };
-        var svc = BuildService(history);
-
-        var evalReached = await svc.EvaluateAsync(Rec(RecommendationRating.Buy, d0, target: 120m));
-        evalReached!.TargetReached.Should().BeTrue();
-
-        var evalNotReached = await svc.EvaluateAsync(Rec(RecommendationRating.Buy, d0, target: 130m));
-        evalNotReached!.TargetReached.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task TargetReached_Bearish_DetectedCorrectly()
-    {
-        var d0 = new DateOnly(2024, 1, 2);
-        var history = new[]
-        {
-            Point(d0, 100m),
-            Point(d0.AddDays(10), 85m),
-            Point(d0.AddDays(20), 90m),
-        };
-        var svc = BuildService(history);
-
-        var evalReached = await svc.EvaluateAsync(Rec(RecommendationRating.Sell, d0, target: 85m));
-        evalReached!.TargetReached.Should().BeTrue();
-
-        var evalNotReached = await svc.EvaluateAsync(Rec(RecommendationRating.Sell, d0, target: 80m));
-        evalNotReached!.TargetReached.Should().BeFalse();
     }
 
     [Fact]

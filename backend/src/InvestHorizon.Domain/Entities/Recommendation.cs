@@ -11,8 +11,6 @@ public class Recommendation
     public string Source { get; set; } = string.Empty;
     public RecommendationRating Rating { get; set; }
     public DateOnly Date { get; set; }
-    public decimal? TargetPrice { get; set; }
-    public string? Url { get; set; }
     public string? Comment { get; set; }
     public DateTime CreatedAt { get; set; }
 }
