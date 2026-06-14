@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IInstrumentPriceRepository, InstrumentPriceRepository>();
         services.AddScoped<IInstrumentPriceHistoryRepository, InstrumentPriceHistoryRepository>();
         services.AddScoped<IFxRateHistoryRepository, FxRateHistoryRepository>();
+        services.AddScoped<IRecommendationRepository, RecommendationRepository>();
         services.AddScoped<DatabaseSeeder>();
 
         // Market data (free, keyless). Provider-agnostic abstraction; Yahoo is the only implementation today.

@@ -17,6 +17,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<InstrumentPrice> InstrumentPrices => Set<InstrumentPrice>();
     public DbSet<InstrumentPriceHistory> InstrumentPriceHistory => Set<InstrumentPriceHistory>();
     public DbSet<FxRateHistory> FxRateHistory => Set<FxRateHistory>();
+    public DbSet<Recommendation> Recommendations => Set<Recommendation>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -95,6 +96,19 @@ public class AppDbContext : IdentityDbContext<AppUser>
             e.HasKey(a => a.Id);
             e.Property(a => a.Quantity).HasPrecision(18, 8);
             e.Property(a => a.RealizedGainEur).HasPrecision(18, 4);
+        });
+
+        builder.Entity<Recommendation>(e =>
+        {
+            e.HasKey(r => r.Id);
+            e.Property(r => r.UserId).IsRequired();
+            e.Property(r => r.Source).HasMaxLength(200).IsRequired();
+            e.Property(r => r.Rating).HasConversion<string>();
+            e.Property(r => r.TargetPrice).HasPrecision(18, 8);
+            e.Property(r => r.Url).HasMaxLength(2000);
+            e.Property(r => r.Comment).HasMaxLength(4000);
+            e.HasIndex(r => new { r.UserId, r.InstrumentId });
+            e.HasOne(r => r.Instrument).WithMany(i => i.Recommendations).HasForeignKey(r => r.InstrumentId);
         });
     }
 }

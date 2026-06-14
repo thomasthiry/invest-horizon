@@ -94,3 +94,43 @@ export interface RealizedGainsReport {
   perSale: SaleGainDto[];
   taxReport: AnnualTaxReport;
 }
+
+export type RecommendationRating =
+  | 'Buy'
+  | 'Accumulate'
+  | 'Hold'
+  | 'Reduce'
+  | 'Sell';
+
+export interface RecommendationEvaluation {
+  priceAtRec: number;
+  currentPrice: number;
+  returnSince: number;
+  directionallyCorrect: boolean | null;
+  performanceScore: number;
+  targetReached: boolean | null;
+}
+
+export interface Recommendation {
+  id: string;
+  instrumentId: string;
+  isin: string | null;
+  instrumentName: string | null;
+  source: string;
+  rating: RecommendationRating;
+  date: string;
+  targetPrice: number | null;
+  url: string | null;
+  comment: string | null;
+  createdAt: string;
+  evaluation: RecommendationEvaluation | null;
+}
+
+export interface SourceScorecard {
+  source: string;
+  totalCount: number;
+  evaluatedCount: number;
+  hitRate: number | null;
+  avgReturn: number | null;
+  avgScore: number | null;
+}

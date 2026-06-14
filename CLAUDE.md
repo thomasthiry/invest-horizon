@@ -93,7 +93,7 @@ Configurable via environment variables `Seed__UserEmail` / `Seed__UserPassword` 
 # Backend
 cd backend
 dotnet build InvestHorizon.sln
-dotnet test                          # 31 unit tests
+dotnet test                          # unit tests
 dotnet dotnet-ef migrations add <Name> \
   --project src/InvestHorizon.Infrastructure \
   --startup-project src/InvestHorizon.Api \
@@ -217,8 +217,6 @@ All endpoints prefixed `/api`. All except login require `Authorization: Bearer <
 | POST | `/portfolios/{id}/holdings/refresh-prices` | Fetch live quotes from Yahoo Finance for all held instruments; returns enriched holdings |
 | GET | `/portfolios/{id}/realized?year=YYYY` | Realized gains + annual tax report |
 
-**No DELETE endpoints.** Transactions are immutable history; correct via PUT only.
-
 ---
 
 ## Configuration
@@ -242,7 +240,6 @@ All endpoints prefixed `/api`. All except login require `Authorization: Bearer <
 ## Design decisions & constraints
 
 - **No registration endpoint** — user accounts are seeded from config. Add registration only when explicitly requested.
-- **No DELETE** — all records are kept as immutable history.
 - **Computed fields persisted** — `AmountEur`, `BrokerFee`, `TobAmount`, etc. are computed at save time and stored. This preserves the cost snapshot even if fee rules change later. Re-derivable from the raw fields.
 - **EUR as reporting currency** — all P/L and tax figures in EUR. Native currency + FxRate stored per transaction.
 - **Manual broker fee override** — `ManualBrokerFee` on a transaction overrides the computed tier (needed for historical data with different fee schedules).
@@ -258,7 +255,7 @@ All endpoints prefixed `/api`. All except login require `Authorization: Bearer <
 **IMPORTANT: Every session must end by running the full test suite and fixing any failures before closing.**
 
 ```bash
-# Backend (must be 31/31 green)
+# Backend (must all be green)
 cd backend && dotnet test
 
 # Frontend type check (must be error-free)

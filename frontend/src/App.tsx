@@ -7,6 +7,7 @@ import { RequireAuth } from './auth/RequireAuth';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { InstrumentsPage } from './pages/InstrumentsPage';
+import { RecommendationsPage } from './pages/RecommendationsPage';
 import { AppShell } from './AppShell';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
@@ -32,6 +33,7 @@ export default function App() {
                     <Routes>
                       <Route path="/" element={<DashboardPage />} />
                       <Route path="/instruments" element={<InstrumentsPage />} />
+                      <Route path="/recommendations" element={<RecommendationsPage />} />
                       <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                   </AppShell>

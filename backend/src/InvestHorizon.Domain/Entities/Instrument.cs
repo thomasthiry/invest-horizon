@@ -15,5 +15,6 @@ public class Instrument
     public string? PriceSymbol { get; set; }
 
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public ICollection<Recommendation> Recommendations { get; set; } = new List<Recommendation>();
     public InstrumentPrice? LatestPrice { get; set; }
 }

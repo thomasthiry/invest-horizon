@@ -26,6 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Stack gap="xs">
           <NavLink label="Dashboard" component={Link} to="/" active={location.pathname === '/'} />
           <NavLink label="Securities" component={Link} to="/instruments" active={location.pathname === '/instruments'} />
+          <NavLink label="Recommendations" component={Link} to="/recommendations" active={location.pathname === '/recommendations'} />
         </Stack>
       </MantineAppShell.Navbar>
 
