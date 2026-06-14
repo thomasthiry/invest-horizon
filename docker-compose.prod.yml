@@ -14,7 +14,7 @@ services:
     volumes:
       - investhorizon_sqldata_prod:/investhorizon_sqldata
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${investhorizon_postgres_user_prod}"]
+      test: ["CMD-SHELL", "pg_isready -U ${investhorizon_postgres_user_prod} -d investhorizon_prod"]
       interval: 5s
       timeout: 5s
       retries: 10
