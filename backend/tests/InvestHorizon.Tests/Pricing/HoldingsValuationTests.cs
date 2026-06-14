@@ -94,6 +94,9 @@ public class HoldingsValuationTests
     {
         public Task<decimal> GetEurRateAsync(string currency, CancellationToken ct = default)
             => Task.FromResult(currency == "EUR" ? 1m : rate);
+        public Task<IReadOnlyDictionary<DateOnly, decimal>> GetEurRateHistoryAsync(
+            string currency, DateOnly from, DateOnly to, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyDictionary<DateOnly, decimal>>(new Dictionary<DateOnly, decimal>());
     }
 
     private sealed class ITransactionRepositoryFake(IReadOnlyList<Transaction> txs) : ITransactionRepository

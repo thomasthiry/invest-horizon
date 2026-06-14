@@ -1,5 +1,5 @@
 import api from './client';
-import type { Broker, CostPreview, Holding, RealizedGainsReport, Transaction, TransactionSide } from './types';
+import type { Broker, CostPreview, Holding, RealizedGainsReport, Transaction, TransactionSide, ValuationPoint } from './types';
 
 export const transactionsApi = {
   getAll: (portfolioId: string) =>
@@ -36,4 +36,7 @@ export const transactionsApi = {
 
   getRealized: (portfolioId: string, year: number) =>
     api.get<RealizedGainsReport>(`/portfolios/${portfolioId}/realized`, { params: { year } }).then(r => r.data),
+
+  getValuationHistory: (portfolioId: string) =>
+    api.get<ValuationPoint[]>(`/portfolios/${portfolioId}/valuation-history`).then(r => r.data),
 };

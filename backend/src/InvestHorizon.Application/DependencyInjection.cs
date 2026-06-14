@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<HoldingsService>();
         services.AddScoped<RealizedGainsService>();
         services.AddScoped<PriceRefreshService>();
+        services.AddScoped<ValuationHistoryService>();
 
         return services;
     }

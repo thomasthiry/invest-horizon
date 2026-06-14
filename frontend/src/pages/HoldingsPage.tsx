@@ -1,11 +1,53 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import {
-  Table, Title, Text, Stack, Alert, Loader, NumberFormatter, Button, Group, Tooltip,
+  Table, Title, Text, Stack, Alert, Loader, NumberFormatter, Button, Group, Tooltip, Paper, Skeleton,
 } from '@mantine/core';
+import { AreaChart } from '@mantine/charts';
 import { transactionsApi } from '../api/transactions';
-import type { Holding } from '../api/types';
+import type { Holding, ValuationPoint } from '../api/types';
 
 interface Props { portfolioId: string; }
+
+const eurFormatter = new Intl.NumberFormat(undefined, {
+  style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
+});
+
+function formatAxisDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+}
+
+function ValuationChart({ portfolioId }: Props) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['valuation-history', portfolioId],
+    queryFn: () => transactionsApi.getValuationHistory(portfolioId),
+    enabled: !!portfolioId,
+  });
+
+  if (isLoading) return <Skeleton height={300} radius="md" />;
+  if (error) return <Alert color="red">Failed to load valuation history.</Alert>;
+  if (!data || data.length === 0) return null;
+
+  return (
+    <Paper withBorder p="md" radius="md">
+      <Title order={4} mb="sm">Portfolio value over time</Title>
+      <AreaChart
+        h={300}
+        data={data as ValuationPoint[]}
+        dataKey="date"
+        series={[
+          { name: 'valueEur', label: 'Market value', color: 'teal.6' },
+          { name: 'investedEur', label: 'Invested', color: 'gray.5' },
+        ]}
+        curveType="monotone"
+        withDots={false}
+        withGradient
+        valueFormatter={(value) => eurFormatter.format(value)}
+        xAxisProps={{ tickFormatter: formatAxisDate, minTickGap: 40 }}
+        yAxisProps={{ width: 70 }}
+      />
+    </Paper>
+  );
+}
 
 // Prices older than this (or missing) are flagged as stale in the UI.
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
@@ -26,13 +68,28 @@ export function HoldingsPage({ portfolioId }: Props) {
 
   const refresh = useMutation({
     mutationFn: () => transactionsApi.refreshPrices(portfolioId),
-    onSuccess: (holdings) => queryClient.setQueryData(['holdings', portfolioId], holdings),
+    onSuccess: (holdings) => {
+      queryClient.setQueryData(['holdings', portfolioId], holdings);
+      // Today's quote may have moved; let the value curve refetch its tail.
+      queryClient.invalidateQueries({ queryKey: ['valuation-history', portfolioId] });
+    },
   });
 
-  if (isLoading) return <Loader />;
-  if (error) return <Alert color="red">Failed to load holdings.</Alert>;
-  if (!data || data.length === 0) return <Text c="dimmed">No open positions.</Text>;
+  return (
+    <Stack>
+      <ValuationChart portfolioId={portfolioId} />
+      {isLoading ? <Loader />
+        : error ? <Alert color="red">Failed to load holdings.</Alert>
+        : !data || data.length === 0 ? <Text c="dimmed">No open positions.</Text>
+        : <HoldingsSection data={data} refresh={refresh} />}
+    </Stack>
+  );
+}
 
+function HoldingsSection({ data, refresh }: {
+  data: Holding[];
+  refresh: UseMutationResult<Holding[], unknown, void, unknown>;
+}) {
   const totalInvested = data.reduce((s, h) => s + h.totalInvestedEur, 0);
   const totalMarketValue = data.reduce((s, h) => s + (h.marketValueEur ?? 0), 0);
   const totalUnrealized = data.reduce((s, h) => s + (h.unrealizedGainEur ?? 0), 0);

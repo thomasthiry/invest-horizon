@@ -62,4 +62,52 @@ public class YahooFinancePriceProviderTests
         var quote = YahooFinancePriceProvider.ParseChart(json, "XXXX");
         quote.Should().BeNull();
     }
+
+    private const string HistoryJson = """
+    {
+      "chart": {
+        "result": [
+          {
+            "meta": { "currency": "USD", "symbol": "AAPL" },
+            "timestamp": [ 1718236800, 1718323200, 1718409600 ],
+            "indicators": {
+              "quote": [ { "close": [ 210.5, null, 212.0 ] } ]
+            }
+          }
+        ],
+        "error": null
+      }
+    }
+    """;
+
+    [Fact]
+    public void ParseChartHistory_ZipsTimestampsAndCloses_SkippingNulls()
+    {
+        var points = YahooFinancePriceProvider.ParseChartHistory(HistoryJson, "AAPL");
+
+        points.Should().HaveCount(2); // the null close is skipped
+        points[0].Date.Should().Be(DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(1718236800).UtcDateTime));
+        points[0].CloseNative.Should().Be(210.5m);
+        points[0].Currency.Should().Be("USD");
+        points[1].CloseNative.Should().Be(212.0m);
+    }
+
+    [Fact]
+    public void ParseChartHistory_NormalisesGbpPenceToGbp()
+    {
+        var json = HistoryJson.Replace("\"USD\"", "\"GBp\"").Replace("210.5", "10500");
+
+        var points = YahooFinancePriceProvider.ParseChartHistory(json, "VWRL.L");
+
+        points.Should().HaveCount(2);
+        points[0].Currency.Should().Be("GBP");
+        points[0].CloseNative.Should().Be(105m);
+    }
+
+    [Fact]
+    public void ParseChartHistory_ReturnsEmpty_WhenNoResult()
+    {
+        var points = YahooFinancePriceProvider.ParseChartHistory("""{"chart":{"result":[],"error":null}}""", "XXXX");
+        points.Should().BeEmpty();
+    }
 }

@@ -48,6 +48,90 @@ public sealed class YahooFinancePriceProvider : IPriceProvider
         return await FetchQuoteAsync(symbol, ct);
     }
 
+    public async Task<IReadOnlyList<PriceHistoryPoint>> GetHistoryAsync(
+        Instrument instrument, DateOnly from, DateOnly to, CancellationToken ct = default)
+    {
+        var symbol = instrument.PriceSymbol;
+        if (string.IsNullOrWhiteSpace(symbol) && !string.IsNullOrWhiteSpace(instrument.Ticker))
+        {
+            var history = await FetchHistoryAsync(instrument.Ticker, from, to, ct);
+            if (history.Count > 0) return history;
+            _logger.LogDebug("Ticker {Ticker} gave no history, falling back to ISIN search for {Isin}",
+                instrument.Ticker, instrument.Isin);
+        }
+
+        symbol ??= await ResolveSymbolAsync(instrument.Isin, ct);
+        if (string.IsNullOrWhiteSpace(symbol)) return Array.Empty<PriceHistoryPoint>();
+
+        return await FetchHistoryAsync(symbol, from, to, ct);
+    }
+
+    private async Task<IReadOnlyList<PriceHistoryPoint>> FetchHistoryAsync(
+        string symbol, DateOnly from, DateOnly to, CancellationToken ct)
+    {
+        // period2 is exclusive on Yahoo's side, so add a day to include `to`.
+        var period1 = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).ToUnixTimeSeconds();
+        var period2 = new DateTimeOffset(to.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).ToUnixTimeSeconds();
+
+        using var resp = await _http.GetAsync(
+            $"https://query1.finance.yahoo.com/v8/finance/chart/{Uri.EscapeDataString(symbol)}" +
+            $"?period1={period1}&period2={period2}&interval=1d", ct);
+        if (!resp.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Yahoo chart history for {Symbol} returned {Status}", symbol, resp.StatusCode);
+            return Array.Empty<PriceHistoryPoint>();
+        }
+
+        return ParseChartHistory(await resp.Content.ReadAsStringAsync(ct), symbol, _logger);
+    }
+
+    /// <summary>Parses the Yahoo chart history response (timestamp + close arrays). Exposed for unit testing.</summary>
+    public static IReadOnlyList<PriceHistoryPoint> ParseChartHistory(string json, string symbol, ILogger? logger = null)
+    {
+        using var doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("chart", out var chart) ||
+            !chart.TryGetProperty("result", out var result) ||
+            result.ValueKind != JsonValueKind.Array || result.GetArrayLength() == 0)
+        {
+            logger?.LogWarning("Yahoo chart history for {Symbol} had no result", symbol);
+            return Array.Empty<PriceHistoryPoint>();
+        }
+
+        var node = result[0];
+        var currency = node.TryGetProperty("meta", out var meta) && meta.TryGetProperty("currency", out var ccyEl)
+            ? ccyEl.GetString() ?? "EUR"
+            : "EUR";
+        // Yahoo quotes UK instruments in pence ("GBp"); normalise to GBP so FX conversion works.
+        var divideByHundred = string.Equals(currency, "GBp", StringComparison.Ordinal);
+        if (divideByHundred) currency = "GBP";
+
+        if (!node.TryGetProperty("timestamp", out var timestamps) || timestamps.ValueKind != JsonValueKind.Array ||
+            !node.TryGetProperty("indicators", out var indicators) ||
+            !indicators.TryGetProperty("quote", out var quote) ||
+            quote.ValueKind != JsonValueKind.Array || quote.GetArrayLength() == 0 ||
+            !quote[0].TryGetProperty("close", out var closes) || closes.ValueKind != JsonValueKind.Array)
+        {
+            logger?.LogWarning("Yahoo chart history for {Symbol} had no timestamp/close arrays", symbol);
+            return Array.Empty<PriceHistoryPoint>();
+        }
+
+        var count = Math.Min(timestamps.GetArrayLength(), closes.GetArrayLength());
+        var points = new List<PriceHistoryPoint>(count);
+        for (var i = 0; i < count; i++)
+        {
+            var closeEl = closes[i];
+            if (closeEl.ValueKind != JsonValueKind.Number) continue; // null close on a non-trading slot
+
+            var price = closeEl.GetDecimal();
+            if (divideByHundred) price /= 100m;
+
+            var date = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(timestamps[i].GetInt64()).UtcDateTime);
+            points.Add(new PriceHistoryPoint(date, price, currency));
+        }
+
+        return points;
+    }
+
     private async Task<string?> ResolveSymbolAsync(string isin, CancellationToken ct)
     {
         using var resp = await _http.GetAsync(

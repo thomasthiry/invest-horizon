@@ -58,6 +58,12 @@ export interface Holding {
   priceSource: string | null;
 }
 
+export interface ValuationPoint {
+  date: string;        // ISO date, e.g. "2024-01-02"
+  valueEur: number;    // total portfolio market value in EUR
+  investedEur: number; // net invested cost basis in EUR (buys − sell proceeds)
+}
+
 export interface CostPreview {
   amountNative: number;
   amountEur: number;

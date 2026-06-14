@@ -15,6 +15,8 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<SaleAllocation> SaleAllocations => Set<SaleAllocation>();
     public DbSet<InstrumentPrice> InstrumentPrices => Set<InstrumentPrice>();
+    public DbSet<InstrumentPriceHistory> InstrumentPriceHistory => Set<InstrumentPriceHistory>();
+    public DbSet<FxRateHistory> FxRateHistory => Set<FxRateHistory>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -47,6 +49,21 @@ public class AppDbContext : IdentityDbContext<AppUser>
             e.Property(p => p.PriceNative).HasPrecision(18, 8);
             e.Property(p => p.Currency).HasMaxLength(3).IsRequired();
             e.Property(p => p.Source).HasMaxLength(40).IsRequired();
+        });
+
+        builder.Entity<InstrumentPriceHistory>(e =>
+        {
+            e.HasKey(p => new { p.InstrumentId, p.Date });
+            e.Property(p => p.CloseNative).HasPrecision(18, 8);
+            e.Property(p => p.Currency).HasMaxLength(3).IsRequired();
+            e.HasOne(p => p.Instrument).WithMany().HasForeignKey(p => p.InstrumentId);
+        });
+
+        builder.Entity<FxRateHistory>(e =>
+        {
+            e.HasKey(r => new { r.Currency, r.Date });
+            e.Property(r => r.Currency).HasMaxLength(3).IsRequired();
+            e.Property(r => r.RatePerEur).HasPrecision(18, 8);
         });
 
         builder.Entity<Transaction>(e =>
