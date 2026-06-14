@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Table, Title, Stack, Alert, Loader, Badge, NumberFormatter, Button, Group, Modal, Text, ActionIcon } from '@mantine/core';
+import { Table, Title, Stack, Alert, Loader, Badge, NumberFormatter, Button, Group, Modal, Text, ActionIcon, Tooltip } from '@mantine/core';
 import { IconEdit, IconTrash } from '@tabler/icons-react';
 import { transactionsApi } from '../api/transactions';
 import { TransactionForm } from './TransactionForm';
@@ -116,7 +116,17 @@ export function TransactionsPage({ portfolioId }: Props) {
                 <Table.Td ta="right"><NumberFormatter value={tx.unitPrice} decimalScale={4} /> {tx.currency}</Table.Td>
                 <Table.Td ta="right"><NumberFormatter value={tx.amountEur} decimalScale={2} thousandSeparator /></Table.Td>
                 <Table.Td ta="right"><NumberFormatter value={tx.brokerFee} decimalScale={2} /></Table.Td>
-                <Table.Td ta="right"><NumberFormatter value={tx.tobAmount} decimalScale={2} /></Table.Td>
+                <Table.Td ta="right">
+                  <Tooltip
+                    label={`${tx.amountEur > 0 ? ((tx.tobAmount / tx.amountEur) * 100).toFixed(3) : '0.000'}%`}
+                    withArrow
+                    position="top"
+                  >
+                    <span style={{ cursor: 'default', textDecoration: 'underline dotted' }}>
+                      <NumberFormatter value={tx.tobAmount} decimalScale={2} />
+                    </span>
+                  </Tooltip>
+                </Table.Td>
                 <Table.Td ta="right">
                   {tx.side === 'Buy'
                     ? <Text c="red" size="sm" fw={600}>€<NumberFormatter value={tx.totalCost} decimalScale={2} thousandSeparator /></Text>
