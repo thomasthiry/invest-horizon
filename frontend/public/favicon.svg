@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
   <!-- Background rounded square -->
-  <rect width="48" height="48" rx="10" fill="#6920d4"/>
+  <rect width="48" height="48" rx="10" fill="#16a34a"/>
 
   <!-- Rising bar chart bars -->
   <rect x="6" y="28" width="7" height="12" rx="2" fill="white" opacity="0.6"/>
@@ -8,8 +8,8 @@
   <rect x="28" y="12" width="7" height="28" rx="2" fill="white"/>
 
   <!-- Upward trending arrow line -->
-  <polyline points="6,32 17,22 28,16 42,8" stroke="#47bfff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <polyline points="6,32 17,22 28,16 42,8" stroke="#86efac" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 
   <!-- Arrow head -->
-  <polyline points="36,7 42,8 41,14" stroke="#47bfff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <polyline points="36,7 42,8 41,14" stroke="#86efac" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>
