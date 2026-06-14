@@ -1,0 +1,64 @@
+version: '2'
+services:
+  db:
+    container_name: investhorizon_db_prod
+    image: postgres:16
+    restart: unless-stopped
+    ports:
+      - "15433:5432"
+    environment:
+      - POSTGRES_DB=investhorizon_prod
+      - POSTGRES_USER=${investhorizon_postgres_user_prod}
+      - POSTGRES_PASSWORD=${investhorizon_postgres_password_prod}
+      - PGDATA=/investhorizon_sqldata
+    volumes:
+      - investhorizon_sqldata_prod:/investhorizon_sqldata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${investhorizon_postgres_user_prod}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - network-shared-with-proxy
+
+  api:
+    container_name: investhorizon_api_prod
+    image: thomasthiry/investhorizon-api:${investhorizon_image_tag}
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Host=investhorizon_db_prod;Port=5432;Database=investhorizon_prod;Username=${investhorizon_postgres_user_prod};Password=${investhorizon_postgres_password_prod}
+      - Jwt__Key=${investhorizon_jwt_key}
+      - Jwt__Issuer=${investhorizon_jwt_issuer}
+      - Seed__UserEmail=${investhorizon_seed_user_email}
+      - Seed__UserPassword=${investhorizon_seed_user_password}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - network-shared-with-proxy
+
+  web:
+    container_name: investhorizon_web_prod
+    image: thomasthiry/investhorizon-web:${investhorizon_image_tag}
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      - VIRTUAL_HOST=investhorizon.evolve11.com
+      - LETSENCRYPT_HOST=investhorizon.evolve11.com
+      - LETSENCRYPT_EMAIL=thomas.thiry@evolve11.com
+    depends_on:
+      - api
+    networks:
+      - network-shared-with-proxy
+
+networks:
+  network-shared-with-proxy:
+    external: true
+
+volumes:
+  investhorizon_sqldata_prod:

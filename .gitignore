@@ -1,0 +1,8 @@
+# Production secrets — never commit the real environment file.
+.env
+.env.prod
+.env.*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
