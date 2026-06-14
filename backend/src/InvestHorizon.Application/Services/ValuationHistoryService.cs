@@ -18,6 +18,7 @@ public sealed class ValuationHistoryService
     private readonly IFxRateProvider _fxProvider;
     private readonly IInstrumentPriceHistoryRepository _priceHistory;
     private readonly IFxRateHistoryRepository _fxHistory;
+    private readonly IInstrumentPriceRepository _livePrice;
 
     public ValuationHistoryService(
         ITransactionRepository transactions,
@@ -25,7 +26,8 @@ public sealed class ValuationHistoryService
         IPriceProvider priceProvider,
         IFxRateProvider fxProvider,
         IInstrumentPriceHistoryRepository priceHistory,
-        IFxRateHistoryRepository fxHistory)
+        IFxRateHistoryRepository fxHistory,
+        IInstrumentPriceRepository livePrice)
     {
         _transactions = transactions;
         _instruments = instruments;
@@ -33,6 +35,7 @@ public sealed class ValuationHistoryService
         _fxProvider = fxProvider;
         _priceHistory = priceHistory;
         _fxHistory = fxHistory;
+        _livePrice = livePrice;
     }
 
     public async Task<IReadOnlyList<ValuationPoint>> GetAsync(Guid portfolioId, CancellationToken ct = default)
@@ -54,6 +57,11 @@ public sealed class ValuationHistoryService
         // Net invested EUR (buy cost − sell proceeds) across the whole portfolio.
         var investedSeries = StepSeries.Cumulative(
             txs.Select(t => (t.Date, t.Side == TransactionSide.Buy ? t.TotalCost : -t.NetProceeds)));
+
+        // Live quotes cached by "Refresh prices" (keyed by instrumentId). Used to snap today's point
+        // to the same value the holdings table shows. Null PriceNative falls back to the daily close.
+        var liveQuotes = (await _livePrice.GetByPortfolioAsync(portfolioId, ct))
+            .ToDictionary(p => p.InstrumentId);
 
         // Cached daily close per held instrument; currency is taken from the price points themselves.
         var priceByInstrument = new Dictionary<Guid, StepSeries>();
@@ -78,11 +86,27 @@ public sealed class ValuationHistoryService
         for (var d = from; d <= to; d = d.AddDays(1))
         {
             decimal valueEur = 0m;
+            var isToday = d == to;
             foreach (var (instrumentId, qtySeries) in qtyByInstrument)
             {
                 var qty = qtySeries.ValueAt(d) ?? 0m;
                 if (qty == 0m) continue;
 
+                // Today: prefer the live intraday quote so the chart tip matches the holdings table.
+                if (isToday && liveQuotes.TryGetValue(instrumentId, out var live))
+                {
+                    var liveCcy = live.Currency;
+                    decimal liveRate = liveCcy.Equals("EUR", StringComparison.OrdinalIgnoreCase)
+                        ? 1m
+                        : await _fxProvider.GetEurRateAsync(liveCcy, ct);
+                    if (liveRate > 0m)
+                    {
+                        valueEur += qty * live.PriceNative / liveRate;
+                        continue;
+                    }
+                }
+
+                // All other days (and today when no live quote): use forward-filled daily close.
                 var price = priceByInstrument[instrumentId].ValueAt(d, orEarliest: true);
                 if (price is null) continue; // no price known yet → not valued
 

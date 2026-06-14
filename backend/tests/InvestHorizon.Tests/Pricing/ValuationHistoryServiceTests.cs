@@ -30,7 +30,9 @@ public class ValuationHistoryServiceTests
     private static ValuationHistoryService Build(
         IReadOnlyList<Transaction> txs,
         IReadOnlyDictionary<Guid, IReadOnlyList<PriceHistoryPoint>> prices,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<DateOnly, decimal>>? fx = null)
+        IReadOnlyDictionary<string, IReadOnlyDictionary<DateOnly, decimal>>? fx = null,
+        IReadOnlyList<InstrumentPrice>? liveQuotes = null,
+        IReadOnlyDictionary<string, decimal>? liveFxRates = null)
     {
         var instruments = txs.Select(t => t.InstrumentId).Distinct()
             .ToDictionary(id => id, id => new Instrument { Id = id, Isin = "X", Name = "X", Currency = "EUR" });
@@ -38,9 +40,10 @@ public class ValuationHistoryServiceTests
             new TxRepoFake(txs),
             new InstrumentRepoFake(instruments),
             new PriceProviderFake(prices),
-            new FxProviderFake(fx ?? new Dictionary<string, IReadOnlyDictionary<DateOnly, decimal>>()),
+            new FxProviderFake(fx ?? new Dictionary<string, IReadOnlyDictionary<DateOnly, decimal>>(), liveFxRates),
             new PriceHistoryRepoFake(),
-            new FxHistoryRepoFake());
+            new FxHistoryRepoFake(),
+            new LivePriceRepoFake(liveQuotes ?? []));
     }
 
     private static decimal ValueOn(IReadOnlyList<ValuationPoint> points, DateOnly date)
@@ -111,6 +114,82 @@ public class ValuationHistoryServiceTests
         ValueOn(points, new DateOnly(2024, 2, 1)).Should().Be(1600m); // 10 * 200 / 1.25
     }
 
+    [Fact]
+    public async Task TodaysPoint_UsesLiveQuoteWhenAvailable_MatchingHoldingsTotal()
+    {
+        var i1 = Guid.NewGuid();
+        var pastDate = new DateOnly(2024, 3, 1);
+        var txs = new[] { Tx(i1, TransactionSide.Buy, pastDate, 10m, 1000m, 0m, "EUR") };
+
+        // Daily close history has 100 EUR; live quote has 150 EUR.
+        var prices = new Dictionary<Guid, IReadOnlyList<PriceHistoryPoint>>
+        {
+            [i1] = [new(pastDate, 100m, "EUR")],
+        };
+        var liveQuotes = new[]
+        {
+            new InstrumentPrice { InstrumentId = i1, PriceNative = 150m, Currency = "EUR" },
+        };
+        var svc = Build(txs, prices, liveQuotes: liveQuotes);
+
+        var points = await svc.GetAsync(PortfolioId);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        // Past days still use daily-close (100 × 10 = 1000).
+        ValueOn(points, pastDate).Should().Be(1000m);
+        // Today uses live quote (150 × 10 = 1500).
+        ValueOn(points, today).Should().Be(1500m);
+    }
+
+    [Fact]
+    public async Task TodaysPoint_UsesLiveQuoteWithFxConversion()
+    {
+        var i1 = Guid.NewGuid();
+        var pastDate = new DateOnly(2024, 4, 1);
+        var txs = new[] { Tx(i1, TransactionSide.Buy, pastDate, 10m, 2000m, 0m, "USD") };
+
+        var prices = new Dictionary<Guid, IReadOnlyList<PriceHistoryPoint>>
+        {
+            [i1] = [new(pastDate, 200m, "USD")],
+        };
+        var fxHistory = new Dictionary<string, IReadOnlyDictionary<DateOnly, decimal>>
+        {
+            ["USD"] = new Dictionary<DateOnly, decimal> { [pastDate] = 1.10m },
+        };
+        var liveQuotes = new[]
+        {
+            // Live price = 210 USD; live FX = 1 EUR = 1.20 USD → 10 * 210 / 1.20 = 1750
+            new InstrumentPrice { InstrumentId = i1, PriceNative = 210m, Currency = "USD" },
+        };
+        var liveFxRates = new Dictionary<string, decimal> { ["USD"] = 1.20m };
+        var svc = Build(txs, prices, fxHistory, liveQuotes, liveFxRates);
+
+        var points = await svc.GetAsync(PortfolioId);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        ValueOn(points, today).Should().Be(1750m); // 10 * 210 / 1.20
+    }
+
+    [Fact]
+    public async Task TodaysPoint_FallsBackToDailyClose_WhenNoLiveQuote()
+    {
+        var i1 = Guid.NewGuid();
+        var pastDate = new DateOnly(2024, 5, 1);
+        var txs = new[] { Tx(i1, TransactionSide.Buy, pastDate, 5m, 500m, 0m, "EUR") };
+        var prices = new Dictionary<Guid, IReadOnlyList<PriceHistoryPoint>>
+        {
+            [i1] = [new(pastDate, 100m, "EUR")],
+        };
+        // No live quotes provided.
+        var svc = Build(txs, prices);
+
+        var points = await svc.GetAsync(PortfolioId);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        // Falls back to forward-filled close: 5 * 100 = 500.
+        ValueOn(points, today).Should().Be(500m);
+    }
+
     // --- Fakes ---
 
     private sealed class PriceProviderFake(IReadOnlyDictionary<Guid, IReadOnlyList<PriceHistoryPoint>> prices) : IPriceProvider
@@ -123,13 +202,26 @@ public class ValuationHistoryServiceTests
                 : Array.Empty<PriceHistoryPoint>());
     }
 
-    private sealed class FxProviderFake(IReadOnlyDictionary<string, IReadOnlyDictionary<DateOnly, decimal>> fx) : IFxRateProvider
+    private sealed class FxProviderFake(
+        IReadOnlyDictionary<string, IReadOnlyDictionary<DateOnly, decimal>> fx,
+        IReadOnlyDictionary<string, decimal>? liveRates = null) : IFxRateProvider
     {
-        public Task<decimal> GetEurRateAsync(string currency, CancellationToken ct = default) => Task.FromResult(1m);
+        public Task<decimal> GetEurRateAsync(string currency, CancellationToken ct = default)
+            => Task.FromResult(liveRates is not null && liveRates.TryGetValue(currency, out var r) ? r : 1m);
         public Task<IReadOnlyDictionary<DateOnly, decimal>> GetEurRateHistoryAsync(string currency, DateOnly from, DateOnly to, CancellationToken ct = default)
             => Task.FromResult(fx.TryGetValue(currency, out var r)
                 ? (IReadOnlyDictionary<DateOnly, decimal>)r.Where(kv => kv.Key >= from && kv.Key <= to).ToDictionary(kv => kv.Key, kv => kv.Value)
                 : new Dictionary<DateOnly, decimal>());
+    }
+
+    private sealed class LivePriceRepoFake(IReadOnlyList<InstrumentPrice> prices) : IInstrumentPriceRepository
+    {
+        public Task<IReadOnlyList<InstrumentPrice>> GetByPortfolioAsync(Guid portfolioId, CancellationToken ct = default)
+            => Task.FromResult(prices);
+        public Task<InstrumentPrice?> GetByInstrumentAsync(Guid instrumentId, CancellationToken ct = default)
+            => Task.FromResult(prices.FirstOrDefault(p => p.InstrumentId == instrumentId));
+        public Task UpsertAsync(InstrumentPrice price, CancellationToken ct = default) => Task.CompletedTask;
+        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class InstrumentRepoFake(IReadOnlyDictionary<Guid, Instrument> instruments) : IInstrumentRepository
