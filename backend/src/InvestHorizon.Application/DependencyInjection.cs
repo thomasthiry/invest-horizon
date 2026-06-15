@@ -11,6 +11,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<IBrokerFeeCalculator, KeytradeFeeCalculator>();
         services.AddSingleton<IBrokerFeeCalculator, RevolutFeeCalculator>();
+        services.AddSingleton<IBrokerFeeCalculator, MeDirectFeeCalculator>();
         services.AddSingleton<ITobCalculator, BelgianTobCalculator>();
         services.AddSingleton<IFifoMatcher, FifoMatcher>();
         services.AddSingleton<ICapitalGainsTaxService>(_ => new CapitalGainsTaxService(annualTaxExemption));

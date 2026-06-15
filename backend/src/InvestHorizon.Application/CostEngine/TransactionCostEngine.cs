@@ -26,7 +26,7 @@ public sealed class TransactionCostEngine
         var calculator = _feeCalculators.FirstOrDefault(c => c.Broker == tx.Broker)
             ?? throw new NotSupportedException($"No fee calculator for broker {tx.Broker}.");
 
-        tx.BrokerFee = tx.ManualBrokerFee ?? calculator.Calculate(tx.AmountEur, tx.Side);
+        tx.BrokerFee = tx.ManualBrokerFee ?? calculator.Calculate(tx.AmountEur, tx.Side, instrumentType);
         tx.TobAmount = _tob.Calculate(tx.AmountEur, instrumentType);
 
         if (tx.Side == TransactionSide.Buy)
@@ -61,7 +61,7 @@ public sealed class TransactionCostEngine
         var calculator = _feeCalculators.FirstOrDefault(c => c.Broker == broker)
             ?? throw new NotSupportedException($"No fee calculator for broker {broker}.");
 
-        var brokerFee = manualBrokerFee ?? calculator.Calculate(amountEur, side);
+        var brokerFee = manualBrokerFee ?? calculator.Calculate(amountEur, side, instrumentType);
         var tob = _tob.Calculate(amountEur, instrumentType);
 
         var totalCost = side == TransactionSide.Buy ? amountEur + brokerFee + tob : 0m;

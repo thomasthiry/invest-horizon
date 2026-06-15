@@ -10,24 +10,26 @@ public class KeytradeFeeTests
     private readonly KeytradeFeeCalculator _calc = new();
 
     [Theory]
-    [InlineData(139.09, 7.95)]       // ≤ €2,500
-    [InlineData(2500.00, 7.95)]      // boundary ≤ €2,500
-    [InlineData(4995.375, 14.95)]    // > €2,500 and ≤ €5,000
-    [InlineData(2073.5, 7.95)]       // ≤ €2,500
-    [InlineData(1449.0, 7.95)]       // ≤ €2,500
-    [InlineData(10000.0, 19.95)]     // > €5,000 and ≤ €25,000
-    [InlineData(30000.0, 24.60)]     // > €25,000: 30000 * 0.082% = 24.60
-    public void Calculate_ReturnsTieredFee(decimal amount, decimal expected)
+    [InlineData(100.0, 2.45)]        // ≤ €250
+    [InlineData(250.0, 2.45)]        // boundary ≤ €250
+    [InlineData(250.01, 5.95)]       // > €250 and ≤ €2,500
+    [InlineData(2500.0, 5.95)]       // boundary ≤ €2,500
+    [InlineData(2500.01, 14.95)]     // > €2,500 and ≤ €10,000
+    [InlineData(10000.0, 14.95)]     // boundary ≤ €10,000
+    [InlineData(10000.01, 22.45)]    // first extra €10k block: 14.95 + 7.50
+    [InlineData(20000.0, 22.45)]     // still within first extra block
+    [InlineData(20000.01, 29.95)]    // second extra block: 14.95 + 2 × 7.50
+    public void Calculate_ReturnsEuronextBlockFee(decimal amount, decimal expected)
     {
-        var fee = _calc.Calculate(amount, TransactionSide.Buy);
+        var fee = _calc.Calculate(amount, TransactionSide.Buy, InstrumentType.Share);
         fee.Should().BeApproximately(expected, 0.01m);
     }
 
     [Fact]
-    public void Calculate_AboveMax_MinFeeApplies()
+    public void Calculate_IsSymmetric_ForBuyAndSell()
     {
-        // Very small amount above €25k: 0.082% might be < €19.95
-        var fee = _calc.Calculate(25_001m, TransactionSide.Buy);
-        fee.Should().BeGreaterThanOrEqualTo(19.95m);
+        var buy = _calc.Calculate(5_000m, TransactionSide.Buy, InstrumentType.Etf);
+        var sell = _calc.Calculate(5_000m, TransactionSide.Sell, InstrumentType.Etf);
+        buy.Should().Be(sell);
     }
 }

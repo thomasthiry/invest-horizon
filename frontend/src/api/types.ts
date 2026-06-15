@@ -1,5 +1,5 @@
 export type InstrumentType = 'Etf' | 'Share' | 'Bond' | 'CapitalizingFund';
-export type Broker = 'Keytrade' | 'Revolut';
+export type Broker = 'Keytrade' | 'Revolut' | 'MeDirect';
 export type TransactionSide = 'Buy' | 'Sell';
 
 export interface Portfolio {

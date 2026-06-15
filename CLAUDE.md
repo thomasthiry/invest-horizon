@@ -166,24 +166,23 @@ Instrument (global, not per-user)
 ## Cost & tax engine
 
 ### Broker fees (`IBrokerFeeCalculator`)
-Strategy pattern; resolved by `Broker` enum.
+Strategy pattern; one calculator per `Broker` enum value, resolved at runtime. The fee is a
+function of `(amountEur, side, instrumentType)`. Fees are symmetric on buy and sell.
 
-| Broker | Rule |
-|--------|------|
-| Keytrade | Tiered: ≤ €2,500 → €7.95 · ≤ €5,000 → €14.95 · ≤ €25,000 → €19.95 · > €25,000 → 0.082% min €19.95 |
-| Revolut | €0 (FX spread captured in the stored FxRate) |
+| Broker | Shape of the rule |
+|--------|-------------------|
+| Keytrade | Block grid by order value (Euronext) |
+| Revolut | Flat percentage with a minimum |
+| MeDirect | Per instrument type; ETFs free, otherwise percentage with a minimum |
 
-If `ManualBrokerFee` is set on a transaction, it overrides the computed fee.
+Exact rates/tiers are hardcoded in each calculator under `Application/CostEngine/` — that code is
+the source of truth (scoped to Euronext; other exchanges via `ManualBrokerFee`). Update the rules
+there, not here. If `ManualBrokerFee` is set on a transaction, it overrides the computed fee.
 
 ### Belgian TOB (`BelgianTobCalculator`)
-Symmetric on buy and sell. Applied to `AmountEur`.
-
-| InstrumentType | Rate | Cap |
-|---------------|------|-----|
-| Share | 0.35% | €1,600 |
-| Etf | 0.12% | €1,300 |
-| Bond | 0.12% | €1,300 |
-| CapitalizingFund | 1.32% | €4,000 |
+Symmetric on buy and sell. Applied to `AmountEur`. Each `InstrumentType` has its own rate and a
+per-order cap; the exact figures are hardcoded in `BelgianTobCalculator` (the source of truth) —
+update them there, not here.
 
 ### FIFO matching (`FifoMatcher`)
 When a Sell transaction is created, open buy lots for the same (Portfolio, Instrument) are fetched ordered by date ASC, then Id ASC. Sell quantity is consumed from oldest lots first. Each consumed slice produces a `SaleAllocation` with `RealizedGainEur = sellProceedsShare − buyCostBasisShare` (both proportional, EUR, net of costs). `RemainingQuantity` on consumed buy lots is updated atomically.

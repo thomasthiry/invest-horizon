@@ -127,7 +127,7 @@ export function TransactionForm({ portfolioId, transaction, onSuccess }: Props) 
             />
             <Select
               label="Broker"
-              data={['Keytrade', 'Revolut']}
+              data={['Keytrade', 'Revolut', 'MeDirect']}
               required
               data-testid="broker-select"
               {...form.getInputProps('broker')}
