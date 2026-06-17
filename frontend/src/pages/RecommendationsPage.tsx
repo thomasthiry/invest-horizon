@@ -151,6 +151,7 @@ export function RecommendationsPage() {
             <Text c="dimmed">No recommendations yet.</Text>
           )}
           {recommendations && recommendations.length > 0 && (
+            <Table.ScrollContainer minWidth={900}>
             <Table striped withTableBorder>
               <Table.Thead>
                 <Table.Tr>
@@ -219,12 +220,14 @@ export function RecommendationsPage() {
                 ))}
               </Table.Tbody>
             </Table>
+            </Table.ScrollContainer>
           )}
         </Tabs.Panel>
 
         <Tabs.Panel value="scorecard" pt="sm">
           {scorecard.length === 0 && <Text c="dimmed">No data yet — add recommendations first.</Text>}
           {scorecard.length > 0 && (
+            <Table.ScrollContainer minWidth={700}>
             <Table striped withTableBorder>
               <Table.Thead>
                 <Table.Tr>
@@ -265,6 +268,7 @@ export function RecommendationsPage() {
                 ))}
               </Table.Tbody>
             </Table>
+            </Table.ScrollContainer>
           )}
         </Tabs.Panel>
       </Tabs>

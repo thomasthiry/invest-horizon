@@ -71,6 +71,7 @@ export function RealizedPage({ portfolioId }: Props) {
           {data.perSale.length > 0 && (
             <Stack>
               <Title order={4}>Per Sale Detail</Title>
+              <Table.ScrollContainer minWidth={500}>
               <Table striped withTableBorder fz="sm">
                 <Table.Thead>
                   <Table.Tr>
@@ -95,6 +96,7 @@ export function RealizedPage({ portfolioId }: Props) {
                   ))}
                 </Table.Tbody>
               </Table>
+              </Table.ScrollContainer>
             </Stack>
           )}
         </>

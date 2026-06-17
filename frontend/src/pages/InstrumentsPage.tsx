@@ -73,6 +73,7 @@ export function InstrumentsPage() {
 
       {(!data || data.length === 0) && <Text c="dimmed">No securities registered yet.</Text>}
       {data && data.length > 0 && (
+        <Table.ScrollContainer minWidth={600}>
         <Table striped withTableBorder>
           <Table.Thead>
             <Table.Tr>
@@ -95,6 +96,7 @@ export function InstrumentsPage() {
             ))}
           </Table.Tbody>
         </Table>
+        </Table.ScrollContainer>
       )}
     </Stack>
   );

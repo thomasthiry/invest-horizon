@@ -87,6 +87,7 @@ export function TransactionsPage({ portfolioId }: Props) {
 
       {(!data || data.length === 0) && <Text c="dimmed">No transactions yet.</Text>}
       {data && data.length > 0 && (
+        <Table.ScrollContainer minWidth={900}>
         <Table striped highlightOnHover withTableBorder fz="sm">
           <Table.Thead>
             <Table.Tr>
@@ -147,6 +148,7 @@ export function TransactionsPage({ portfolioId }: Props) {
             ))}
           </Table.Tbody>
         </Table>
+        </Table.ScrollContainer>
       )}
     </Stack>
   );

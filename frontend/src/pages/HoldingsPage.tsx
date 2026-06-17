@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@
 import {
   Table, Title, Text, Stack, Alert, Loader, NumberFormatter, Button, Group, Tooltip, Paper, Skeleton,
 } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { AreaChart } from '@mantine/charts';
 import { transactionsApi } from '../api/transactions';
 import type { Holding, ValuationPoint } from '../api/types';
@@ -17,13 +18,15 @@ function formatAxisDate(iso: string): string {
 }
 
 function ValuationChart({ portfolioId }: Props) {
+  const isMobile = useMediaQuery('(max-width: 48em)');
   const { data, isLoading, error } = useQuery({
     queryKey: ['valuation-history', portfolioId],
     queryFn: () => transactionsApi.getValuationHistory(portfolioId),
     enabled: !!portfolioId,
   });
 
-  if (isLoading) return <Skeleton height={300} radius="md" />;
+  const chartHeight = isMobile ? 220 : 300;
+  if (isLoading) return <Skeleton height={chartHeight} radius="md" />;
   if (error) return <Alert color="red">Failed to load valuation history.</Alert>;
   if (!data || data.length === 0) return null;
 
@@ -31,7 +34,7 @@ function ValuationChart({ portfolioId }: Props) {
     <Paper withBorder p="md" radius="md">
       <Title order={4} mb="sm">Portfolio value over time</Title>
       <AreaChart
-        h={300}
+        h={chartHeight}
         data={data as ValuationPoint[]}
         dataKey="date"
         series={[
@@ -42,8 +45,8 @@ function ValuationChart({ portfolioId }: Props) {
         withDots={false}
         withGradient
         valueFormatter={(value) => eurFormatter.format(value)}
-        xAxisProps={{ tickFormatter: formatAxisDate, minTickGap: 40 }}
-        yAxisProps={{ width: 70 }}
+        xAxisProps={{ tickFormatter: formatAxisDate, minTickGap: isMobile ? 20 : 40 }}
+        yAxisProps={{ width: isMobile ? 50 : 70 }}
       />
     </Paper>
   );
@@ -132,43 +135,45 @@ function HoldingsSection({ data, refresh }: {
             : `Last refreshed: ${formatDateTime(oldestFetchedAt)}${oldestAsOf ? ` · Market data from ${formatDateTime(oldestAsOf)}` : ''}${isStale ? ' — may be outdated' : ''}${anyMissing ? ' · some positions have no quote' : ''}`}
       </Alert>
 
-      <Table striped highlightOnHover withTableBorder>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Security</Table.Th>
-            <Table.Th>ISIN</Table.Th>
-            <Table.Th>Currency</Table.Th>
-            <Table.Th ta="right">Quantity</Table.Th>
-            <Table.Th ta="right">Avg Cost (€)</Table.Th>
-            <Table.Th ta="right">Invested (€)</Table.Th>
-            <Table.Th ta="right">Price</Table.Th>
-            <Table.Th ta="right">Market Value (€)</Table.Th>
-            <Table.Th ta="right">Unrealized P/L</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {data.map(h => (
-            <HoldingRow key={h.instrumentId} h={h} />
-          ))}
-        </Table.Tbody>
-        <Table.Tfoot>
-          <Table.Tr>
-            <Table.Th colSpan={5}>Totals</Table.Th>
-            <Table.Th ta="right">
-              <NumberFormatter value={totalInvested} decimalScale={2} thousandSeparator />
-            </Table.Th>
-            <Table.Th />
-            <Table.Th ta="right">
-              {priced.length > 0
-                ? <NumberFormatter value={totalMarketValue} decimalScale={2} thousandSeparator />
-                : <Text c="dimmed">—</Text>}
-            </Table.Th>
-            <Table.Th ta="right">
-              {priced.length > 0 ? <PnL value={totalUnrealized} /> : <Text c="dimmed">—</Text>}
-            </Table.Th>
-          </Table.Tr>
-        </Table.Tfoot>
-      </Table>
+      <Table.ScrollContainer minWidth={800}>
+        <Table striped highlightOnHover withTableBorder>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Security</Table.Th>
+              <Table.Th>ISIN</Table.Th>
+              <Table.Th>Currency</Table.Th>
+              <Table.Th ta="right">Quantity</Table.Th>
+              <Table.Th ta="right">Avg Cost (€)</Table.Th>
+              <Table.Th ta="right">Invested (€)</Table.Th>
+              <Table.Th ta="right">Price</Table.Th>
+              <Table.Th ta="right">Market Value (€)</Table.Th>
+              <Table.Th ta="right">Unrealized P/L</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {data.map(h => (
+              <HoldingRow key={h.instrumentId} h={h} />
+            ))}
+          </Table.Tbody>
+          <Table.Tfoot>
+            <Table.Tr>
+              <Table.Th colSpan={5}>Totals</Table.Th>
+              <Table.Th ta="right">
+                <NumberFormatter value={totalInvested} decimalScale={2} thousandSeparator />
+              </Table.Th>
+              <Table.Th />
+              <Table.Th ta="right">
+                {priced.length > 0
+                  ? <NumberFormatter value={totalMarketValue} decimalScale={2} thousandSeparator />
+                  : <Text c="dimmed">—</Text>}
+              </Table.Th>
+              <Table.Th ta="right">
+                {priced.length > 0 ? <PnL value={totalUnrealized} /> : <Text c="dimmed">—</Text>}
+              </Table.Th>
+            </Table.Tr>
+          </Table.Tfoot>
+        </Table>
+      </Table.ScrollContainer>
     </Stack>
   );
 }
