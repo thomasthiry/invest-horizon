@@ -45,8 +45,12 @@ const seriesConfig: Record<ChartMode, { name: string; label: string; color: stri
 
 function ValuationChart({ portfolioId }: Props) {
   const isMobile = useMediaQuery('(max-width: 48em)');
-  const [mode,  setMode]  = useState<ChartMode>('value');
-  const [range, setRange] = useState<ChartRange>('All');
+  const [mode,  setMode]  = useState<ChartMode>(
+    () => (localStorage.getItem('chart-mode') as ChartMode | null) ?? 'value',
+  );
+  const [range, setRange] = useState<ChartRange>(
+    () => (localStorage.getItem('chart-range') as ChartRange | null) ?? 'All',
+  );
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['valuation-history', portfolioId],
@@ -85,7 +89,7 @@ function ValuationChart({ portfolioId }: Props) {
           <SegmentedControl
             size="xs"
             value={mode}
-            onChange={v => setMode(v as ChartMode)}
+            onChange={v => { setMode(v as ChartMode); localStorage.setItem('chart-mode', v); }}
             data={[
               { label: 'Value',      value: 'value'  },
               { label: 'P&L (€)',    value: 'pnl'    },
@@ -95,7 +99,7 @@ function ValuationChart({ portfolioId }: Props) {
           <SegmentedControl
             size="xs"
             value={range}
-            onChange={v => setRange(v as ChartRange)}
+            onChange={v => { setRange(v as ChartRange); localStorage.setItem('chart-range', v); }}
             data={['1M', '3M', '6M', '1Y', 'All'].map(v => ({ label: v, value: v }))}
           />
         </Group>
