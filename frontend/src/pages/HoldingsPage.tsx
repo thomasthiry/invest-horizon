@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import {
   Table, Title, Text, Stack, Alert, Loader, NumberFormatter, Button, Group, Tooltip, Paper, Skeleton,
-  ActionIcon,
+  ActionIcon, SegmentedControl,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { AreaChart } from '@mantine/charts';
@@ -21,8 +21,33 @@ function formatAxisDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
 }
 
+type ChartMode  = 'value' | 'pnl' | 'return';
+type ChartRange = '1M' | '3M' | '6M' | '1Y' | 'All';
+
+function getRangeCutoff(range: ChartRange): string | null {
+  if (range === 'All') return null;
+  const d = new Date();
+  if (range === '1M') d.setMonth(d.getMonth() - 1);
+  if (range === '3M') d.setMonth(d.getMonth() - 3);
+  if (range === '6M') d.setMonth(d.getMonth() - 6);
+  if (range === '1Y') d.setFullYear(d.getFullYear() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+const seriesConfig: Record<ChartMode, { name: string; label: string; color: string }[]> = {
+  value:  [
+    { name: 'valueEur',   label: 'Market value', color: 'teal.6' },
+    { name: 'investedEur', label: 'Invested',     color: 'gray.5' },
+  ],
+  pnl:    [{ name: 'pnl',       label: 'Gain / Loss', color: 'teal.6' }],
+  return: [{ name: 'returnPct', label: 'Return',      color: 'teal.6' }],
+};
+
 function ValuationChart({ portfolioId }: Props) {
   const isMobile = useMediaQuery('(max-width: 48em)');
+  const [mode,  setMode]  = useState<ChartMode>('value');
+  const [range, setRange] = useState<ChartRange>('All');
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['valuation-history', portfolioId],
     queryFn: () => transactionsApi.getValuationHistory(portfolioId),
@@ -34,21 +59,57 @@ function ValuationChart({ portfolioId }: Props) {
   if (error) return <Alert color="red">Failed to load valuation history.</Alert>;
   if (!data || data.length === 0) return null;
 
+  const cutoff  = getRangeCutoff(range);
+  const visible = cutoff ? data.filter((p: ValuationPoint) => p.date >= cutoff) : data;
+  const chartData = visible.map((p: ValuationPoint) => ({
+    date:        p.date,
+    valueEur:    p.valueEur,
+    investedEur: p.investedEur,
+    pnl:         p.valueEur - p.investedEur,
+    returnPct:   p.investedEur > 0 ? ((p.valueEur - p.investedEur) / p.investedEur) * 100 : 0,
+  }));
+
+  const valueFormatter = mode === 'return'
+    ? (v: number) => v.toFixed(1) + '%'
+    : (v: number) => eurFormatter.format(v);
+
+  const refLines = mode !== 'value'
+    ? [{ y: 0, color: 'gray.4', label: '' }]
+    : undefined;
+
   return (
     <Paper withBorder p="md" radius="md">
-      <Title order={4} mb="sm">Portfolio value over time</Title>
+      <Group justify="space-between" wrap="wrap" mb="sm" gap="xs">
+        <Title order={4}>Portfolio value over time</Title>
+        <Group gap="xs">
+          <SegmentedControl
+            size="xs"
+            value={mode}
+            onChange={v => setMode(v as ChartMode)}
+            data={[
+              { label: 'Value',      value: 'value'  },
+              { label: 'P&L (€)',    value: 'pnl'    },
+              { label: 'Return (%)', value: 'return' },
+            ]}
+          />
+          <SegmentedControl
+            size="xs"
+            value={range}
+            onChange={v => setRange(v as ChartRange)}
+            data={['1M', '3M', '6M', '1Y', 'All'].map(v => ({ label: v, value: v }))}
+          />
+        </Group>
+      </Group>
       <AreaChart
         h={chartHeight}
-        data={data as ValuationPoint[]}
+        data={chartData}
         dataKey="date"
-        series={[
-          { name: 'valueEur', label: 'Market value', color: 'teal.6' },
-          { name: 'investedEur', label: 'Invested', color: 'gray.5' },
-        ]}
+        series={seriesConfig[mode]}
         curveType="monotone"
         withDots={false}
         withGradient
-        valueFormatter={(value) => eurFormatter.format(value)}
+        referenceLines={refLines}
+        valueFormatter={valueFormatter}
         xAxisProps={{ tickFormatter: formatAxisDate, minTickGap: isMobile ? 20 : 40 }}
         yAxisProps={{ width: isMobile ? 50 : 70 }}
       />
