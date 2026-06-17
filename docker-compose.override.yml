@@ -1,7 +1,10 @@
 # Development overrides: run api and db only; use Vite dev server for frontend.
-# Usage: docker-compose up db api  then  cd frontend && npm run dev
+# Usage: docker-compose up db api --build -d  then  cd frontend && npm run dev
+# The build target uses the SDK image so dotnet watch is available.
 services:
   api:
+    build:
+      target: build
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       Cors__Origins__0: http://localhost:5173

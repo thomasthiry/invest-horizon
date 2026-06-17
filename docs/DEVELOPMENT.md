@@ -58,7 +58,7 @@ If you make one of those and don't see it reflected, kick the API:
 docker compose restart api
 ```
 
-Use `--build` **only** when you change the `Dockerfile` or NuGet packages:
+Use `--build` when you change the `Dockerfile`, NuGet packages, or `docker-compose.override.yml`:
 
 ```bash
 docker compose up -d --build api

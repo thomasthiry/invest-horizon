@@ -1,4 +1,5 @@
 using InvestHorizon.Application.Interfaces;
+using InvestHorizon.Application.Services;
 using InvestHorizon.Domain.Entities;
 using InvestHorizon.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +13,13 @@ namespace InvestHorizon.Api.Controllers;
 public class InstrumentsController : ControllerBase
 {
     private readonly IInstrumentRepository _instruments;
-    public InstrumentsController(IInstrumentRepository instruments) => _instruments = instruments;
+    private readonly InstrumentPriceHistoryService _priceHistory;
+
+    public InstrumentsController(IInstrumentRepository instruments, InstrumentPriceHistoryService priceHistory)
+    {
+        _instruments = instruments;
+        _priceHistory = priceHistory;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken ct)
@@ -26,6 +33,24 @@ public class InstrumentsController : ControllerBase
     {
         var inst = await _instruments.GetByIdAsync(id, ct);
         return inst is null ? NotFound() : Ok(ToDto(inst));
+    }
+
+    [HttpGet("{id:guid}/price-history")]
+    public async Task<IActionResult> GetPriceHistory(
+        Guid id,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        CancellationToken ct)
+    {
+        var inst = await _instruments.GetByIdAsync(id, ct);
+        if (inst is null) return NotFound();
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var resolvedTo = to ?? today;
+        var resolvedFrom = from ?? today.AddYears(-1);
+
+        var rows = await _priceHistory.GetAsync(id, resolvedFrom, resolvedTo, ct);
+        return Ok(rows.Select(r => new PriceHistoryDto(r.Date, r.CloseNative, r.Currency)));
     }
 
     [HttpPost]
@@ -55,3 +80,4 @@ public class InstrumentsController : ControllerBase
 
 public record InstrumentDto(Guid Id, string Isin, string Name, InstrumentType Type, string Currency, string? Ticker);
 public record CreateInstrumentRequest(string Isin, string Name, InstrumentType Type, string Currency, string? Ticker);
+public record PriceHistoryDto(DateOnly Date, decimal Close, string Currency);

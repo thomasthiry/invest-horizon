@@ -39,6 +39,7 @@ public sealed class HoldingsService
 
             var totalCostEur = g.Sum(t => t.TotalCost * (t.RemainingQuantity / t.Quantity));
             var avgCostEur = totalQty > 0 ? totalCostEur / totalQty : 0m;
+            var avgCostNative = totalQty > 0 ? g.Sum(t => t.UnitPrice * t.RemainingQuantity) / totalQty : 0m;
             var first = g.First();
 
             decimal? currentPriceNative = null;
@@ -72,6 +73,7 @@ public sealed class HoldingsService
                 Currency: first.Currency,
                 OpenQuantity: totalQty,
                 AvgCostEur: avgCostEur,
+                AvgCostNative: avgCostNative,
                 TotalInvestedEur: totalCostEur,
                 CurrentPriceNative: currentPriceNative,
                 PriceCurrency: priceCurrency,
@@ -94,6 +96,7 @@ public record HoldingDto(
     string Currency,
     decimal OpenQuantity,
     decimal AvgCostEur,
+    decimal AvgCostNative,
     decimal TotalInvestedEur,
     decimal? CurrentPriceNative = null,
     string? PriceCurrency = null,

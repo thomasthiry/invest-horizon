@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import {
   Table, Title, Text, Stack, Alert, Loader, NumberFormatter, Button, Group, Tooltip, Paper, Skeleton,
+  ActionIcon,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { AreaChart } from '@mantine/charts';
+import { IconChartLine } from '@tabler/icons-react';
 import { transactionsApi } from '../api/transactions';
 import type { Holding, ValuationPoint } from '../api/types';
+import { InstrumentPriceChartModal } from './InstrumentPriceChartModal';
 
 interface Props { portfolioId: string; }
 
@@ -93,6 +97,7 @@ function HoldingsSection({ data, refresh }: {
   data: Holding[];
   refresh: UseMutationResult<Holding[], unknown, void, unknown>;
 }) {
+  const [chartHolding, setChartHolding] = useState<Holding | null>(null);
   const totalInvested = data.reduce((s, h) => s + h.totalInvestedEur, 0);
   const totalMarketValue = data.reduce((s, h) => s + (h.marketValueEur ?? 0), 0);
   const totalUnrealized = data.reduce((s, h) => s + (h.unrealizedGainEur ?? 0), 0);
@@ -135,6 +140,8 @@ function HoldingsSection({ data, refresh }: {
             : `Last refreshed: ${formatDateTime(oldestFetchedAt)}${oldestAsOf ? ` · Market data from ${formatDateTime(oldestAsOf)}` : ''}${isStale ? ' — may be outdated' : ''}${anyMissing ? ' · some positions have no quote' : ''}`}
       </Alert>
 
+      <InstrumentPriceChartModal holding={chartHolding} onClose={() => setChartHolding(null)} />
+
       <Table.ScrollContainer minWidth={800}>
         <Table striped highlightOnHover withTableBorder>
           <Table.Thead>
@@ -148,11 +155,12 @@ function HoldingsSection({ data, refresh }: {
               <Table.Th ta="right">Price</Table.Th>
               <Table.Th ta="right">Market Value (€)</Table.Th>
               <Table.Th ta="right">Unrealized P/L</Table.Th>
+              <Table.Th />
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {data.map(h => (
-              <HoldingRow key={h.instrumentId} h={h} />
+              <HoldingRow key={h.instrumentId} h={h} onShowChart={() => setChartHolding(h)} />
             ))}
           </Table.Tbody>
           <Table.Tfoot>
@@ -170,6 +178,7 @@ function HoldingsSection({ data, refresh }: {
               <Table.Th ta="right">
                 {priced.length > 0 ? <PnL value={totalUnrealized} /> : <Text c="dimmed">—</Text>}
               </Table.Th>
+              <Table.Th />
             </Table.Tr>
           </Table.Tfoot>
         </Table>
@@ -178,7 +187,7 @@ function HoldingsSection({ data, refresh }: {
   );
 }
 
-function HoldingRow({ h }: { h: Holding }) {
+function HoldingRow({ h, onShowChart }: { h: Holding; onShowChart: () => void }) {
   const pnlPct = h.unrealizedGainEur != null && h.totalInvestedEur > 0
     ? (h.unrealizedGainEur / h.totalInvestedEur) * 100
     : null;
@@ -215,6 +224,13 @@ function HoldingRow({ h }: { h: Holding }) {
         {h.unrealizedGainEur != null
           ? <PnL value={h.unrealizedGainEur} pct={pnlPct} />
           : <Text c="dimmed">—</Text>}
+      </Table.Td>
+      <Table.Td>
+        <Tooltip label="Price history">
+          <ActionIcon variant="subtle" color="gray" size="sm" onClick={onShowChart}>
+            <IconChartLine size={16} />
+          </ActionIcon>
+        </Tooltip>
       </Table.Td>
     </Table.Tr>
   );

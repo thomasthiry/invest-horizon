@@ -48,6 +48,7 @@ export interface Holding {
   currency: string;
   openQuantity: number;
   avgCostEur: number;
+  avgCostNative: number;
   totalInvestedEur: number;
   // Live valuation (null until prices have been refreshed / if a quote is unavailable).
   currentPriceNative: number | null;
@@ -57,6 +58,12 @@ export interface Holding {
   priceAsOf: string | null;
   priceFetchedAt: string | null;
   priceSource: string | null;
+}
+
+export interface PriceHistoryPoint {
+  date: string;     // ISO date, e.g. "2025-01-02"
+  close: number;    // closing price in native currency
+  currency: string;
 }
 
 export interface ValuationPoint {

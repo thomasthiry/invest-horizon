@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<PriceRefreshService>();
         services.AddScoped<ValuationHistoryService>();
         services.AddScoped<RecommendationService>();
+        services.AddScoped<InstrumentPriceHistoryService>();
 
         return services;
     }
