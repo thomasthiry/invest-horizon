@@ -166,12 +166,13 @@ export function HoldingsPage({ portfolioId }: Props) {
       {isLoading ? <Loader />
         : error ? <Alert color="red">Failed to load holdings.</Alert>
         : !data || data.length === 0 ? <Text c="dimmed">No open positions.</Text>
-        : <HoldingsSection data={data} refresh={refresh} inflationBaseline={inflationBaseline} />}
+        : <HoldingsSection portfolioId={portfolioId} data={data} refresh={refresh} inflationBaseline={inflationBaseline} />}
     </Stack>
   );
 }
 
-function HoldingsSection({ data, refresh, inflationBaseline }: {
+function HoldingsSection({ portfolioId, data, refresh, inflationBaseline }: {
+  portfolioId: string;
   data: Holding[];
   refresh: UseMutationResult<Holding[], unknown, void, unknown>;
   inflationBaseline?: number;
@@ -219,7 +220,7 @@ function HoldingsSection({ data, refresh, inflationBaseline }: {
             : `Last refreshed: ${formatDateTime(oldestFetchedAt)}${oldestAsOf ? ` · Market data from ${formatDateTime(oldestAsOf)}` : ''}${isStale ? ' — may be outdated' : ''}${anyMissing ? ' · some positions have no quote' : ''}`}
       </Alert>
 
-      <InstrumentPriceChartModal holding={chartHolding} onClose={() => setChartHolding(null)} />
+      <InstrumentPriceChartModal portfolioId={portfolioId} holding={chartHolding} onClose={() => setChartHolding(null)} />
 
       <Table.ScrollContainer minWidth={800}>
         <Table striped highlightOnHover withTableBorder>
