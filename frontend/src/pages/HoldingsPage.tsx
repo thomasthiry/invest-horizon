@@ -141,6 +141,16 @@ export function HoldingsPage({ portfolioId }: Props) {
     enabled: !!portfolioId,
   });
 
+  // Reuses the same query key as ValuationChart — React Query dedupes the request.
+  const { data: valuationData } = useQuery({
+    queryKey: ['valuation-history', portfolioId],
+    queryFn: () => transactionsApi.getValuationHistory(portfolioId),
+    enabled: !!portfolioId,
+  });
+  const inflationBaseline = valuationData && valuationData.length > 0
+    ? valuationData[valuationData.length - 1].inflationBaselineEur
+    : undefined;
+
   const refresh = useMutation({
     mutationFn: () => transactionsApi.refreshPrices(portfolioId),
     onSuccess: (holdings) => {
@@ -156,14 +166,15 @@ export function HoldingsPage({ portfolioId }: Props) {
       {isLoading ? <Loader />
         : error ? <Alert color="red">Failed to load holdings.</Alert>
         : !data || data.length === 0 ? <Text c="dimmed">No open positions.</Text>
-        : <HoldingsSection data={data} refresh={refresh} />}
+        : <HoldingsSection data={data} refresh={refresh} inflationBaseline={inflationBaseline} />}
     </Stack>
   );
 }
 
-function HoldingsSection({ data, refresh }: {
+function HoldingsSection({ data, refresh, inflationBaseline }: {
   data: Holding[];
   refresh: UseMutationResult<Holding[], unknown, void, unknown>;
+  inflationBaseline?: number;
 }) {
   const [chartHolding, setChartHolding] = useState<Holding | null>(null);
   const totalInvested = data.reduce((s, h) => s + h.totalInvestedEur, 0);
@@ -248,6 +259,20 @@ function HoldingsSection({ data, refresh }: {
               </Table.Th>
               <Table.Th />
             </Table.Tr>
+            {inflationBaseline != null && priced.length > 0 && (
+              <Table.Tr>
+                <Table.Th colSpan={5}>
+                  <Text size="xs" c="dimmed">Real P/L (inflation-adj.)</Text>
+                </Table.Th>
+                <Table.Th />
+                <Table.Th />
+                <Table.Th />
+                <Table.Th ta="right">
+                  <PnL value={totalMarketValue - inflationBaseline} />
+                </Table.Th>
+                <Table.Th />
+              </Table.Tr>
+            )}
           </Table.Tfoot>
         </Table>
       </Table.ScrollContainer>
