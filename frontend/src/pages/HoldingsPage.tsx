@@ -34,7 +34,7 @@ function getRangeCutoff(range: ChartRange): string | null {
   return d.toISOString().slice(0, 10);
 }
 
-const seriesConfig: Record<ChartMode, { name: string; label: string; color: string }[]> = {
+const seriesConfig: Record<ChartMode, { name: string; label: string; color: string; strokeDasharray?: string }[]> = {
   value:  [
     { name: 'valueEur',             label: 'Market value',       color: 'teal.6'   },
     { name: 'investedEur',          label: 'Invested',           color: 'gray.5'   },
