@@ -9,7 +9,7 @@ How to run InvestHorizon locally so that code changes show up automatically.
 docker compose up db api -d
 
 # 2. Start the frontend dev server (hot reload).
-cd frontend && npm run dev
+cd frontend; npm run dev
 ```
 
 Then open **http://localhost:5173**. Leave both running while you work. Stop everything with `docker compose down`.

@@ -67,9 +67,10 @@ export interface PriceHistoryPoint {
 }
 
 export interface ValuationPoint {
-  date: string;        // ISO date, e.g. "2024-01-02"
-  valueEur: number;    // total portfolio market value in EUR
-  investedEur: number; // net invested cost basis in EUR (buys − sell proceeds)
+  date: string;                  // ISO date, e.g. "2024-01-02"
+  valueEur: number;              // total portfolio market value in EUR
+  investedEur: number;           // net invested cost basis in EUR (buys − sell proceeds)
+  inflationBaselineEur: number;  // invested cost grown by Belgian HICP since each contribution date
 }
 
 export interface CostPreview {

@@ -36,8 +36,9 @@ function getRangeCutoff(range: ChartRange): string | null {
 
 const seriesConfig: Record<ChartMode, { name: string; label: string; color: string }[]> = {
   value:  [
-    { name: 'valueEur',   label: 'Market value', color: 'teal.6' },
-    { name: 'investedEur', label: 'Invested',     color: 'gray.5' },
+    { name: 'valueEur',             label: 'Market value',       color: 'teal.6'   },
+    { name: 'investedEur',          label: 'Invested',           color: 'gray.5'   },
+    { name: 'inflationBaselineEur', label: 'Inflation baseline', color: 'orange.5', strokeDasharray: '5 4' },
   ],
   pnl:    [{ name: 'pnl',       label: 'Gain / Loss', color: 'teal.6' }],
   return: [{ name: 'returnPct', label: 'Return',      color: 'teal.6' }],
@@ -66,11 +67,12 @@ function ValuationChart({ portfolioId }: Props) {
   const cutoff  = getRangeCutoff(range);
   const visible = cutoff ? data.filter((p: ValuationPoint) => p.date >= cutoff) : data;
   const chartData = visible.map((p: ValuationPoint) => ({
-    date:        p.date,
-    valueEur:    p.valueEur,
-    investedEur: p.investedEur,
-    pnl:         p.valueEur - p.investedEur,
-    returnPct:   p.investedEur > 0 ? ((p.valueEur - p.investedEur) / p.investedEur) * 100 : 0,
+    date:                 p.date,
+    valueEur:             p.valueEur,
+    investedEur:          p.investedEur,
+    inflationBaselineEur: p.inflationBaselineEur,
+    pnl:                  p.valueEur - p.investedEur,
+    returnPct:            p.investedEur > 0 ? ((p.valueEur - p.investedEur) / p.investedEur) * 100 : 0,
   }));
 
   const valueFormatter = mode === 'return'
@@ -116,6 +118,7 @@ function ValuationChart({ portfolioId }: Props) {
         valueFormatter={valueFormatter}
         xAxisProps={{ tickFormatter: formatAxisDate, minTickGap: isMobile ? 20 : 40 }}
         yAxisProps={{ width: isMobile ? 50 : 70 }}
+        areaProps={(series) => series.name === 'inflationBaselineEur' ? { fillOpacity: 0 } : {}}
       />
     </Paper>
   );

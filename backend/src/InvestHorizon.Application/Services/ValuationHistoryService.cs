@@ -19,6 +19,8 @@ public sealed class ValuationHistoryService
     private readonly IInstrumentPriceHistoryRepository _priceHistory;
     private readonly IFxRateHistoryRepository _fxHistory;
     private readonly IInstrumentPriceRepository _livePrice;
+    private readonly IInflationProvider _inflationProvider;
+    private readonly IInflationHistoryRepository _inflationHistory;
 
     public ValuationHistoryService(
         ITransactionRepository transactions,
@@ -27,7 +29,9 @@ public sealed class ValuationHistoryService
         IFxRateProvider fxProvider,
         IInstrumentPriceHistoryRepository priceHistory,
         IFxRateHistoryRepository fxHistory,
-        IInstrumentPriceRepository livePrice)
+        IInstrumentPriceRepository livePrice,
+        IInflationProvider inflationProvider,
+        IInflationHistoryRepository inflationHistoryRepository)
     {
         _transactions = transactions;
         _instruments = instruments;
@@ -36,6 +40,8 @@ public sealed class ValuationHistoryService
         _priceHistory = priceHistory;
         _fxHistory = fxHistory;
         _livePrice = livePrice;
+        _inflationProvider = inflationProvider;
+        _inflationHistory = inflationHistoryRepository;
     }
 
     public async Task<IReadOnlyList<ValuationPoint>> GetAsync(Guid portfolioId, CancellationToken ct = default)
@@ -57,6 +63,18 @@ public sealed class ValuationHistoryService
         // Net invested EUR (buy cost − sell proceeds) across the whole portfolio.
         var investedSeries = StepSeries.Cumulative(
             txs.Select(t => (t.Date, t.Side == TransactionSide.Buy ? t.TotalCost : -t.NetProceeds)));
+
+        // Belgian HICP CPI series (monthly, forward-filled to daily).
+        // Deflated series = cumulative (signedContribution / CPI_at_transaction_date).
+        // Baseline on day d = CPI(d) × deflatedSeries(d) = inflation-adjusted invested cost.
+        const string cpiRegion = "BE";
+        var cpiSeries = await EnsureCpiHistoryAsync(cpiRegion, from, to, ct);
+        var deflatedSeries = StepSeries.Cumulative(txs.Select(t =>
+        {
+            var signed = t.Side == TransactionSide.Buy ? t.TotalCost : -t.NetProceeds;
+            var cpiAtTx = cpiSeries.ValueAt(t.Date, orEarliest: true) ?? 0m;
+            return (t.Date, cpiAtTx > 0 ? signed / cpiAtTx : signed);
+        }));
 
         // Live quotes cached by "Refresh prices" (keyed by instrumentId). Used to snap today's point
         // to the same value the holdings table shows. Null PriceNative falls back to the daily close.
@@ -122,7 +140,19 @@ public sealed class ValuationHistoryService
                 }
             }
 
-            points.Add(new ValuationPoint(d, decimal.Round(valueEur, 2), decimal.Round(investedSeries.ValueAt(d) ?? 0m, 2)));
+            var cpiToday = cpiSeries.ValueAt(d, orEarliest: true);
+            decimal baselineEur;
+            if (cpiToday is > 0)
+            {
+                baselineEur = decimal.Round(cpiToday.Value * (deflatedSeries.ValueAt(d) ?? 0m), 2);
+            }
+            else
+            {
+                // No CPI available; fall back to nominal invested so the line stays meaningful.
+                baselineEur = decimal.Round(investedSeries.ValueAt(d) ?? 0m, 2);
+            }
+
+            points.Add(new ValuationPoint(d, decimal.Round(valueEur, 2), decimal.Round(investedSeries.ValueAt(d) ?? 0m, 2), baselineEur));
         }
 
         return points;
@@ -173,6 +203,30 @@ public sealed class ValuationHistoryService
 
         var rows = await _fxHistory.GetRangeAsync(currency, from, to, ct);
         return StepSeries.FromValues(rows.Select(r => (r.Date, r.RatePerEur)));
+    }
+
+    private async Task<StepSeries> EnsureCpiHistoryAsync(string region, DateOnly from, DateOnly to, CancellationToken ct)
+    {
+        var latest = await _inflationHistory.GetLatestDateAsync(region, ct);
+        // Re-fetch from Eurostat if the cache is missing or more than 45 days behind today.
+        // Eurostat publishes the full series in one call, so we always upsert the whole dataset.
+        if (latest is null || latest.Value.AddDays(45) < to)
+        {
+            var fetched = await _inflationProvider.GetIndexHistoryAsync(region, ct);
+            if (fetched.Count > 0)
+                await _inflationHistory.UpsertRangeAsync(fetched.Select(kv => new Domain.Entities.InflationHistory
+                {
+                    Region = region,
+                    Date = kv.Key,
+                    Index = kv.Value
+                }), ct);
+        }
+
+        // Fetch a couple of months before the first transaction so the earliest contributions
+        // have a CPI denominator even if they predate the cache's first entry.
+        var fetchFrom = from.AddMonths(-2);
+        var rows = await _inflationHistory.GetRangeAsync(region, fetchFrom, to, ct);
+        return StepSeries.FromValues(rows.Select(r => (r.Date, r.Index)));
     }
 
     /// <summary>
@@ -242,4 +296,4 @@ public sealed class ValuationHistoryService
 }
 
 /// <summary>A single day on the portfolio value curve, all figures in EUR.</summary>
-public record ValuationPoint(DateOnly Date, decimal ValueEur, decimal InvestedEur);
+public record ValuationPoint(DateOnly Date, decimal ValueEur, decimal InvestedEur, decimal InflationBaselineEur);

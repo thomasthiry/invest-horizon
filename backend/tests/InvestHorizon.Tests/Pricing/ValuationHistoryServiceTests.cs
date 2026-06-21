@@ -43,7 +43,9 @@ public class ValuationHistoryServiceTests
             new FxProviderFake(fx ?? new Dictionary<string, IReadOnlyDictionary<DateOnly, decimal>>(), liveFxRates),
             new PriceHistoryRepoFake(),
             new FxHistoryRepoFake(),
-            new LivePriceRepoFake(liveQuotes ?? []));
+            new LivePriceRepoFake(liveQuotes ?? []),
+            new InflationProviderFake(),
+            new InflationHistoryRepoFake());
     }
 
     private static decimal ValueOn(IReadOnlyList<ValuationPoint> points, DateOnly date)
@@ -292,5 +294,23 @@ public class ValuationHistoryServiceTests
             }
             return Task.CompletedTask;
         }
+    }
+
+    // Returns no CPI data so existing tests aren't affected by inflation math.
+    private sealed class InflationProviderFake : IInflationProvider
+    {
+        public Task<IReadOnlyDictionary<DateOnly, decimal>> GetIndexHistoryAsync(
+            string region, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyDictionary<DateOnly, decimal>>(new Dictionary<DateOnly, decimal>());
+    }
+
+    private sealed class InflationHistoryRepoFake : IInflationHistoryRepository
+    {
+        public Task<IReadOnlyList<InflationHistory>> GetRangeAsync(string region, DateOnly from, DateOnly to, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<InflationHistory>>([]);
+        public Task<DateOnly?> GetLatestDateAsync(string region, CancellationToken ct = default)
+            => Task.FromResult<DateOnly?>(null);
+        public Task UpsertRangeAsync(IEnumerable<InflationHistory> rows, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }

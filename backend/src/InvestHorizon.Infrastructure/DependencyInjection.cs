@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IInstrumentPriceRepository, InstrumentPriceRepository>();
         services.AddScoped<IInstrumentPriceHistoryRepository, InstrumentPriceHistoryRepository>();
         services.AddScoped<IFxRateHistoryRepository, FxRateHistoryRepository>();
+        services.AddScoped<IInflationHistoryRepository, InflationHistoryRepository>();
         services.AddScoped<IRecommendationRepository, RecommendationRepository>();
         services.AddScoped<DatabaseSeeder>();
 
@@ -43,6 +44,8 @@ public static class DependencyInjection
         });
         services.AddHttpClient<IFxRateProvider, FrankfurterFxRateProvider>(c =>
             c.Timeout = TimeSpan.FromSeconds(15));
+        services.AddHttpClient<IInflationProvider, EurostatInflationProvider>(c =>
+            c.Timeout = TimeSpan.FromSeconds(20));
 
         return services;
     }

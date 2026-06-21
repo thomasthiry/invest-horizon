@@ -17,6 +17,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<InstrumentPrice> InstrumentPrices => Set<InstrumentPrice>();
     public DbSet<InstrumentPriceHistory> InstrumentPriceHistory => Set<InstrumentPriceHistory>();
     public DbSet<FxRateHistory> FxRateHistory => Set<FxRateHistory>();
+    public DbSet<InflationHistory> InflationHistory => Set<InflationHistory>();
     public DbSet<Recommendation> Recommendations => Set<Recommendation>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -65,6 +66,13 @@ public class AppDbContext : IdentityDbContext<AppUser>
             e.HasKey(r => new { r.Currency, r.Date });
             e.Property(r => r.Currency).HasMaxLength(3).IsRequired();
             e.Property(r => r.RatePerEur).HasPrecision(18, 8);
+        });
+
+        builder.Entity<InflationHistory>(e =>
+        {
+            e.HasKey(r => new { r.Region, r.Date });
+            e.Property(r => r.Region).HasMaxLength(10).IsRequired();
+            e.Property(r => r.Index).HasPrecision(18, 6);
         });
 
         builder.Entity<Transaction>(e =>
