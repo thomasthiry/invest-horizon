@@ -10,6 +10,7 @@ import { IconChartLine } from '@tabler/icons-react';
 import { transactionsApi } from '../api/transactions';
 import type { Holding, ValuationPoint } from '../api/types';
 import { InstrumentPriceChartModal } from './InstrumentPriceChartModal';
+import { MARKER_SERIES, markerAreaProps, withTransactionMarkers } from './transactionMarkers';
 
 interface Props { portfolioId: string; }
 
@@ -33,6 +34,13 @@ function getRangeCutoff(range: ChartRange): string | null {
   if (range === '1Y') d.setFullYear(d.getFullYear() - 1);
   return d.toISOString().slice(0, 10);
 }
+
+// The line each buy/sell dot sits on, per mode.
+const markerKey: Record<ChartMode, 'valueEur' | 'pnl' | 'returnPct'> = {
+  value:  'valueEur',
+  pnl:    'pnl',
+  return: 'returnPct',
+};
 
 const seriesConfig: Record<ChartMode, { name: string; label: string; color: string; strokeDasharray?: string }[]> = {
   value:  [
@@ -59,6 +67,13 @@ function ValuationChart({ portfolioId }: Props) {
     enabled: !!portfolioId,
   });
 
+  // Same query key as TransactionsPage — React Query dedupes the request.
+  const { data: transactions } = useQuery({
+    queryKey: ['transactions', portfolioId],
+    queryFn: () => transactionsApi.getAll(portfolioId),
+    enabled: !!portfolioId,
+  });
+
   const chartHeight = isMobile ? 220 : 300;
   if (isLoading) return <Skeleton height={chartHeight} radius="md" />;
   if (error) return <Alert color="red">Failed to load valuation history.</Alert>;
@@ -66,7 +81,7 @@ function ValuationChart({ portfolioId }: Props) {
 
   const cutoff  = getRangeCutoff(range);
   const visible = cutoff ? data.filter((p: ValuationPoint) => p.date >= cutoff) : data;
-  const chartData = visible.map((p: ValuationPoint) => ({
+  const points = visible.map((p: ValuationPoint) => ({
     date:                 p.date,
     valueEur:             p.valueEur,
     investedEur:          p.investedEur,
@@ -74,6 +89,8 @@ function ValuationChart({ portfolioId }: Props) {
     pnl:                  p.valueEur - p.investedEur,
     returnPct:            p.investedEur > 0 ? ((p.valueEur - p.investedEur) / p.investedEur) * 100 : 0,
   }));
+  const key = markerKey[mode];
+  const chartData = withTransactionMarkers(points, transactions, p => p[key]);
 
   const valueFormatter = mode === 'return'
     ? (v: number) => v.toFixed(1) + '%'
@@ -110,15 +127,18 @@ function ValuationChart({ portfolioId }: Props) {
         h={chartHeight}
         data={chartData}
         dataKey="date"
-        series={seriesConfig[mode]}
+        series={[...seriesConfig[mode], ...MARKER_SERIES]}
         curveType="monotone"
-        withDots={false}
+        withDots
         withGradient
         referenceLines={refLines}
         valueFormatter={valueFormatter}
         xAxisProps={{ tickFormatter: formatAxisDate, minTickGap: isMobile ? 20 : 40 }}
         yAxisProps={{ width: isMobile ? 50 : 70 }}
-        areaProps={(series) => series.name === 'inflationBaselineEur' ? { fillOpacity: 0 } : {}}
+        areaProps={(series) => markerAreaProps(series) ?? {
+          dot: false,
+          ...(series.name === 'inflationBaselineEur' ? { fillOpacity: 0 } : {}),
+        }}
       />
     </Paper>
   );

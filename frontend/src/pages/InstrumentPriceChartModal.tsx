@@ -6,7 +6,8 @@ import {
 import { AreaChart } from '@mantine/charts';
 import { instrumentsApi } from '../api/instruments';
 import { transactionsApi } from '../api/transactions';
-import type { Holding, PriceHistoryPoint } from '../api/types';
+import type { Holding } from '../api/types';
+import { MARKER_SERIES, markerAreaProps, withTransactionMarkers } from './transactionMarkers';
 
 type Range = '1M' | '3M' | '6M' | '1Y';
 
@@ -34,17 +35,6 @@ function fromDate(range: Range): string {
 
 function formatAxisDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-function findNearestPoint(points: PriceHistoryPoint[], date: string): PriceHistoryPoint | undefined {
-  if (points.length === 0) return undefined;
-  let nearest = points[0];
-  let minDiff = Math.abs(new Date(nearest.date).getTime() - new Date(date).getTime());
-  for (const p of points) {
-    const diff = Math.abs(new Date(p.date).getTime() - new Date(date).getTime());
-    if (diff < minDiff) { minDiff = diff; nearest = p; }
-  }
-  return nearest;
 }
 
 interface Props {
@@ -75,27 +65,11 @@ export function InstrumentPriceChartModal({ portfolioId, holding, onClose }: Pro
     ? [{ y: holding.avgCostNative, label: `Avg cost`, color: 'orange.6' }]
     : undefined;
 
-  const chartData = data?.map(point => {
-    const row: Record<string, string | number | null> = { date: point.date, close: point.close };
-    row.buyMarker = null;
-    row.sellMarker = null;
-    return row;
-  }) ?? [];
-
-  if (data && data.length > 0 && transactions && holding) {
-    const byDate = new Map(data.map(p => [p.date, p]));
-    const relevant = transactions.filter(
-      t => t.instrumentId === holding.instrumentId && t.date >= from && t.date <= today,
-    );
-    for (const tx of relevant) {
-      const point = byDate.get(tx.date) ?? findNearestPoint(data, tx.date);
-      if (!point) continue;
-      const row = chartData.find(r => r.date === point.date);
-      if (!row) continue;
-      if (tx.side === 'Buy') row.buyMarker = point.close;
-      else row.sellMarker = point.close;
-    }
-  }
+  const points = data?.map(p => ({ date: p.date, close: p.close })) ?? [];
+  const ownTransactions = holding
+    ? transactions?.filter(t => t.instrumentId === holding.instrumentId)
+    : undefined;
+  const chartData = withTransactionMarkers(points, ownTransactions, p => p.close);
 
   return (
     <Modal
@@ -142,8 +116,7 @@ export function InstrumentPriceChartModal({ portfolioId, holding, onClose }: Pro
             dataKey="date"
             series={[
               { name: 'close', label: `Price (${data[0]?.currency ?? holding?.currency})`, color: 'teal.6' },
-              { name: 'buyMarker', label: 'Buy', color: 'green.6' },
-              { name: 'sellMarker', label: 'Sell', color: 'red.6' },
+              ...MARKER_SERIES,
             ]}
             curveType="monotone"
             withDots
@@ -156,12 +129,7 @@ export function InstrumentPriceChartModal({ portfolioId, holding, onClose }: Pro
             }}
             yAxisProps={{ width: 70 }}
             valueFormatter={(v) => `${v.toFixed(2)} ${data[0]?.currency ?? ''}`}
-            areaProps={(series) => {
-              if (series.name === 'close') return { dot: false, activeDot: false };
-              if (series.name === 'buyMarker' || series.name === 'sellMarker')
-                return { fill: 'none', stroke: 'none', activeDot: false, connectNulls: false };
-              return {};
-            }}
+            areaProps={(series) => markerAreaProps(series) ?? { dot: false }}
           />
         )}
       </Stack>
