@@ -21,6 +21,20 @@ function formatAxisDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/**
+ * Recharts defaults a numeric y-axis to a domain starting at 0, which squashes a 125 → 130 move
+ * into a flat line. Scope it to what is actually plotted instead. The avg-cost reference line is
+ * folded in so it can never fall outside the domain and silently disappear, and a 5% margin keeps
+ * the curve off the top and bottom edges.
+ */
+function priceDomain(closes: number[], avgCost: number): [number, number] {
+  const values = avgCost > 0 ? [...closes, avgCost] : closes;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = (max - min) * 0.05 || Math.abs(max) * 0.05 || 1;
+  return [min - pad, max + pad];
+}
+
 interface Props {
   portfolioId: string;
   holding: Holding | null;
@@ -111,7 +125,10 @@ export function InstrumentPriceChartModal({ portfolioId, holding, onClose }: Pro
               minTickGap: 40,
               interval: 'preserveStartEnd',
             }}
-            yAxisProps={{ width: 70 }}
+            yAxisProps={{
+              width: 70,
+              domain: priceDomain(points.map(p => p.close), holding?.avgCostNative ?? 0),
+            }}
             valueFormatter={(v) => `${v.toFixed(2)} ${data[0]?.currency ?? ''}`}
             areaProps={(series) => markerAreaProps(series) ?? { dot: false }}
           />
