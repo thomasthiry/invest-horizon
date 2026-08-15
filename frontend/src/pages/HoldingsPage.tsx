@@ -265,7 +265,9 @@ function HoldingsSection({ portfolioId, data, refresh, inflationBaseline }: {
                 <Table.Th colSpan={5}>
                   <Text size="xs" c="dimmed">Real P/L (inflation-adj.)</Text>
                 </Table.Th>
-                <Table.Th />
+                <Table.Th ta="right">
+                  <NumberFormatter value={inflationBaseline} decimalScale={2} thousandSeparator />
+                </Table.Th>
                 <Table.Th />
                 <Table.Th />
                 <Table.Th ta="right">

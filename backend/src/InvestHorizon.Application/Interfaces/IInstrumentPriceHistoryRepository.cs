@@ -11,6 +11,9 @@ public interface IInstrumentPriceHistoryRepository
     /// <summary>Most recent cached date for an instrument, or null if nothing is cached.</summary>
     Task<DateOnly?> GetLatestDateAsync(Guid instrumentId, CancellationToken ct = default);
 
+    /// <summary>Earliest cached date for an instrument, or null if nothing is cached.</summary>
+    Task<DateOnly?> GetEarliestDateAsync(Guid instrumentId, CancellationToken ct = default);
+
     /// <summary>Insert or overwrite the given daily closes, then persist.</summary>
     Task UpsertRangeAsync(IEnumerable<InstrumentPriceHistory> points, CancellationToken ct = default);
 }

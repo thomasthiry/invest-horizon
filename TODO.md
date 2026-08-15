@@ -1,9 +1,8 @@
 # TODO
 
+- Avg cost does not always look ok
 - Show transactions on the graph
-- Align display of units (EUR / € / nothing)
-- Show inflation
-- Show a line with gains over time in the graph?
-- Links from instrument name to price graph (google?)
-- Responsive
+- Graph in modal should not start at 0
+- Sessions should be longer
+- A small graph on each holding line
 - Make sure unrealized p/l on portfolio include sell costs

@@ -263,6 +263,11 @@ public class ValuationHistoryServiceTests
             var dates = _rows.Where(r => r.InstrumentId == instrumentId).Select(r => r.Date).ToList();
             return Task.FromResult<DateOnly?>(dates.Count > 0 ? dates.Max() : null);
         }
+        public Task<DateOnly?> GetEarliestDateAsync(Guid instrumentId, CancellationToken ct = default)
+        {
+            var dates = _rows.Where(r => r.InstrumentId == instrumentId).Select(r => r.Date).ToList();
+            return Task.FromResult<DateOnly?>(dates.Count > 0 ? dates.Min() : null);
+        }
         public Task UpsertRangeAsync(IEnumerable<InstrumentPriceHistory> points, CancellationToken ct = default)
         {
             foreach (var p in points)
@@ -284,6 +289,11 @@ public class ValuationHistoryServiceTests
         {
             var dates = _rows.Where(r => r.Currency == currency).Select(r => r.Date).ToList();
             return Task.FromResult<DateOnly?>(dates.Count > 0 ? dates.Max() : null);
+        }
+        public Task<DateOnly?> GetEarliestDateAsync(string currency, CancellationToken ct = default)
+        {
+            var dates = _rows.Where(r => r.Currency == currency).Select(r => r.Date).ToList();
+            return Task.FromResult<DateOnly?>(dates.Count > 0 ? dates.Min() : null);
         }
         public Task UpsertRangeAsync(IEnumerable<FxRateHistory> rates, CancellationToken ct = default)
         {

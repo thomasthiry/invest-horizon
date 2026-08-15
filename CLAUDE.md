@@ -68,7 +68,7 @@ docker compose up --build
 docker compose up db api -d
 
 # 2. Run frontend dev server with HMR
-cd frontend && npm run dev
+cd frontend ; npm run dev
 # → http://localhost:5173 (Vite proxies /api to localhost:5000)
 ```
 

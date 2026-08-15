@@ -161,22 +161,26 @@ public sealed class ValuationHistoryService
     private async Task<(StepSeries Series, string Currency)> EnsurePriceHistoryAsync(
         Guid instrumentId, DateOnly from, DateOnly to, CancellationToken ct)
     {
+        var earliest = await _priceHistory.GetEarliestDateAsync(instrumentId, ct);
         var latest = await _priceHistory.GetLatestDateAsync(instrumentId, ct);
-        var fetchFrom = latest is null ? from : latest.Value.AddDays(1);
-        if (fetchFrom <= to)
+        var gaps = HistoryGap.MissingRanges(from, to, earliest, latest);
+        if (gaps.Count > 0)
         {
             var instrument = await _instruments.GetByIdAsync(instrumentId, ct);
             if (instrument is not null)
             {
-                var fetched = await _priceProvider.GetHistoryAsync(instrument, fetchFrom, to, ct);
-                if (fetched.Count > 0)
-                    await _priceHistory.UpsertRangeAsync(fetched.Select(p => new InstrumentPriceHistory
-                    {
-                        InstrumentId = instrumentId,
-                        Date = p.Date,
-                        CloseNative = p.CloseNative,
-                        Currency = p.Currency
-                    }), ct);
+                foreach (var (gapFrom, gapTo) in gaps)
+                {
+                    var fetched = await _priceProvider.GetHistoryAsync(instrument, gapFrom, gapTo, ct);
+                    if (fetched.Count > 0)
+                        await _priceHistory.UpsertRangeAsync(fetched.Select(p => new InstrumentPriceHistory
+                        {
+                            InstrumentId = instrumentId,
+                            Date = p.Date,
+                            CloseNative = p.CloseNative,
+                            Currency = p.Currency
+                        }), ct);
+                }
             }
         }
 
@@ -187,11 +191,11 @@ public sealed class ValuationHistoryService
 
     private async Task<StepSeries> EnsureFxHistoryAsync(string currency, DateOnly from, DateOnly to, CancellationToken ct)
     {
+        var earliest = await _fxHistory.GetEarliestDateAsync(currency, ct);
         var latest = await _fxHistory.GetLatestDateAsync(currency, ct);
-        var fetchFrom = latest is null ? from : latest.Value.AddDays(1);
-        if (fetchFrom <= to)
+        foreach (var (gapFrom, gapTo) in HistoryGap.MissingRanges(from, to, earliest, latest))
         {
-            var fetched = await _fxProvider.GetEurRateHistoryAsync(currency, fetchFrom, to, ct);
+            var fetched = await _fxProvider.GetEurRateHistoryAsync(currency, gapFrom, gapTo, ct);
             if (fetched.Count > 0)
                 await _fxHistory.UpsertRangeAsync(fetched.Select(kv => new FxRateHistory
                 {

@@ -141,6 +141,12 @@ public class RecommendationEvaluationTests
             return Task.FromResult(max);
         }
 
+        public Task<DateOnly?> GetEarliestDateAsync(Guid instrumentId, CancellationToken ct = default)
+        {
+            var min = _data.Any() ? _data.Min(p => p.Date) : (DateOnly?)null;
+            return Task.FromResult(min);
+        }
+
         public Task UpsertRangeAsync(IEnumerable<InstrumentPriceHistory> points, CancellationToken ct = default)
             => Task.CompletedTask;
     }

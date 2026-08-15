@@ -24,6 +24,14 @@ public sealed class InstrumentPriceHistoryRepository : IInstrumentPriceHistoryRe
             : null;
     }
 
+    public async Task<DateOnly?> GetEarliestDateAsync(Guid instrumentId, CancellationToken ct = default)
+    {
+        var dates = _db.InstrumentPriceHistory.Where(p => p.InstrumentId == instrumentId);
+        return await dates.AnyAsync(ct)
+            ? await dates.MinAsync(p => p.Date, ct)
+            : null;
+    }
+
     public async Task UpsertRangeAsync(IEnumerable<InstrumentPriceHistory> points, CancellationToken ct = default)
     {
         foreach (var point in points)

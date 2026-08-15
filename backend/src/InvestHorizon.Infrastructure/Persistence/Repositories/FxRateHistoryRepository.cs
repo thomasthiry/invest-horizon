@@ -24,6 +24,14 @@ public sealed class FxRateHistoryRepository : IFxRateHistoryRepository
             : null;
     }
 
+    public async Task<DateOnly?> GetEarliestDateAsync(string currency, CancellationToken ct = default)
+    {
+        var rates = _db.FxRateHistory.Where(r => r.Currency == currency);
+        return await rates.AnyAsync(ct)
+            ? await rates.MinAsync(r => r.Date, ct)
+            : null;
+    }
+
     public async Task UpsertRangeAsync(IEnumerable<FxRateHistory> rates, CancellationToken ct = default)
     {
         foreach (var rate in rates)

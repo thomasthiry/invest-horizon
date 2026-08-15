@@ -11,6 +11,9 @@ public interface IFxRateHistoryRepository
     /// <summary>Most recent cached date for a currency, or null if nothing is cached.</summary>
     Task<DateOnly?> GetLatestDateAsync(string currency, CancellationToken ct = default);
 
+    /// <summary>Earliest cached date for a currency, or null if nothing is cached.</summary>
+    Task<DateOnly?> GetEarliestDateAsync(string currency, CancellationToken ct = default);
+
     /// <summary>Insert or overwrite the given daily rates, then persist.</summary>
     Task UpsertRangeAsync(IEnumerable<FxRateHistory> rates, CancellationToken ct = default);
 }
