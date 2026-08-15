@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import {
   Table, Title, Text, Stack, Alert, Loader, NumberFormatter, Button, Group, Tooltip, Paper, Skeleton,
-  ActionIcon, SegmentedControl,
+  SegmentedControl,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { AreaChart } from '@mantine/charts';
-import { IconChartLine } from '@tabler/icons-react';
 import { transactionsApi } from '../api/transactions';
 import type { Holding, ValuationPoint } from '../api/types';
+import { HoldingSparkline } from './HoldingSparkline';
 import { InstrumentPriceChartModal } from './InstrumentPriceChartModal';
 import { MARKER_SERIES, markerAreaProps, withTransactionMarkers } from './transactionMarkers';
 
@@ -242,7 +242,7 @@ function HoldingsSection({ portfolioId, data, refresh, inflationBaseline }: {
 
       <InstrumentPriceChartModal portfolioId={portfolioId} holding={chartHolding} onClose={() => setChartHolding(null)} />
 
-      <Table.ScrollContainer minWidth={800}>
+      <Table.ScrollContainer minWidth={900}>
         <Table striped highlightOnHover withTableBorder>
           <Table.Thead>
             <Table.Tr>
@@ -255,7 +255,7 @@ function HoldingsSection({ portfolioId, data, refresh, inflationBaseline }: {
               <Table.Th ta="right">Price</Table.Th>
               <Table.Th ta="right">Market Value (€)</Table.Th>
               <Table.Th ta="right">Unrealized P/L</Table.Th>
-              <Table.Th />
+              <Table.Th ta="center">Trend (1M)</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -341,12 +341,8 @@ function HoldingRow({ h, onShowChart }: { h: Holding; onShowChart: () => void })
           ? <PnL value={h.unrealizedGainEur} pct={pnlPct} />
           : <Text c="dimmed">—</Text>}
       </Table.Td>
-      <Table.Td>
-        <Tooltip label="Price history">
-          <ActionIcon variant="subtle" color="gray" size="sm" onClick={onShowChart}>
-            <IconChartLine size={16} />
-          </ActionIcon>
-        </Tooltip>
+      <Table.Td ta="center">
+        <HoldingSparkline holding={h} onClick={onShowChart} />
       </Table.Td>
     </Table.Tr>
   );

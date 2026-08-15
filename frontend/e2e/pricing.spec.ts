@@ -51,6 +51,9 @@ test.describe('Live portfolio valuation', () => {
     await page.route('**/api/portfolios', route =>
       route.fulfill({ json: [{ id: PORTFOLIO_ID, name: 'Test Portfolio', baseCurrency: 'EUR' }] }));
 
+    // Each holding row draws a sparkline from this endpoint; an empty series renders a dash.
+    await page.route('**/price-history*', route => route.fulfill({ json: [] }));
+
     await page.route('**/holdings/refresh-prices', route =>
       route.fulfill({ json: refreshedHoldings }));
 

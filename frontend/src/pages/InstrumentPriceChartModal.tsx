@@ -8,8 +8,7 @@ import { instrumentsApi } from '../api/instruments';
 import { transactionsApi } from '../api/transactions';
 import type { Holding } from '../api/types';
 import { MARKER_SERIES, markerAreaProps, withTransactionMarkers } from './transactionMarkers';
-
-type Range = '1M' | '3M' | '6M' | '1Y';
+import { fromDate, toIsoDate, type Range } from './priceHistoryRange';
 
 const RANGES: { label: string; value: Range }[] = [
   { label: '1M', value: '1M' },
@@ -17,21 +16,6 @@ const RANGES: { label: string; value: Range }[] = [
   { label: '6M', value: '6M' },
   { label: '1Y', value: '1Y' },
 ];
-
-function toIsoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function fromDate(range: Range): string {
-  const d = new Date();
-  switch (range) {
-    case '1M': d.setMonth(d.getMonth() - 1); break;
-    case '3M': d.setMonth(d.getMonth() - 3); break;
-    case '6M': d.setMonth(d.getMonth() - 6); break;
-    case '1Y': d.setFullYear(d.getFullYear() - 1); break;
-  }
-  return toIsoDate(d);
-}
 
 function formatAxisDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
