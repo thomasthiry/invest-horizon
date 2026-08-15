@@ -36,7 +36,8 @@ public class AuthController : ControllerBase
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expiryMinutes = _config.GetValue<int>("Jwt:ExpiryMinutes", 480);
+        var expiryMinutes = _config.GetValue<int?>("Jwt:ExpiryMinutes")
+            ?? throw new InvalidOperationException("Jwt:ExpiryMinutes is required.");
 
         var claims = new[]
         {

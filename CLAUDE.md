@@ -227,7 +227,7 @@ All endpoints prefixed `/api`. All except login require `Authorization: Bearer <
 | `ConnectionStrings:DefaultConnection` | `ConnectionStrings__DefaultConnection` | Postgres connection string |
 | `Jwt:Key` | `Jwt__Key` | HS256 signing secret (≥ 32 chars) |
 | `Jwt:Issuer` | `Jwt__Issuer` | JWT issuer claim |
-| `Jwt:ExpiryMinutes` | `Jwt__ExpiryMinutes` | Token lifetime (default 480 = 8 h) |
+| `Jwt:ExpiryMinutes` | `Jwt__ExpiryMinutes` | Token lifetime in minutes. Required — no code default; the value is in `appsettings.json` |
 | `Seed:UserEmail` | `Seed__UserEmail` | Initial user email |
 | `Seed:UserPassword` | `Seed__UserPassword` | Initial user password |
 | `Cors:Origins` | — | Allowed CORS origins array |
