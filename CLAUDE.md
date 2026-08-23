@@ -118,7 +118,7 @@ npx playwright test  # E2E (requires stack running at BASE_URL)
 - `Enums/`: `Broker` (Keytrade, Revolut), `InstrumentType` (Etf, Share, Bond, CapitalizingFund), `TransactionSide` (Buy, Sell)
 
 **Application** — business logic, no I/O.
-- `CostEngine/`: `TransactionCostEngine` (orchestrator), `KeytradeFeeCalculator`, `RevolutFeeCalculator`, `BelgianTobCalculator`, `FifoMatcher`, `CapitalGainsTaxService`
+- `CostEngine/`: `TransactionCostEngine` (orchestrator), `KeytradeFeeCalculator`, `RevolutFeeCalculator`, `BelgianTobCalculator`, `FifoMatcher`, `CapitalGainsTaxService`, `ExitCostEstimator`
 - `Services/`: `TransactionService` (create + FIFO), `HoldingsService`, `RealizedGainsService`
 - `Interfaces/`: repository contracts + `IBrokerFeeCalculator`, `ITobCalculator`, `IFifoMatcher`, `ICapitalGainsTaxService`
 
@@ -187,6 +187,14 @@ update them there, not here.
 ### FIFO matching (`FifoMatcher`)
 When a Sell transaction is created, open buy lots for the same (Portfolio, Instrument) are fetched ordered by date ASC, then Id ASC. Sell quantity is consumed from oldest lots first. Each consumed slice produces a `SaleAllocation` with `RealizedGainEur = sellProceedsShare − buyCostBasisShare` (both proportional, EUR, net of costs). `RemainingQuantity` on consumed buy lots is updated atomically.
 
+### Exit costs on open positions (`ExitCostEstimator`)
+Unrealized P/L is reported **net of what it would cost to close the position today**. The estimator
+groups the open buy lots of a holding by `Broker` and prices **one sell order per broker** (lots at
+the same broker are liquidated in a single operation), applying that broker's fee grid plus TOB to
+each order's own value. A position split across two brokers therefore pays both brokers' fees, and
+the per-order TOB cap applies once per broker. Order value is the *current* market value in EUR, not
+the purchase price, so the fee tier reflects today's position size.
+
 ### Capital-gains tax (`CapitalGainsTaxService`)
 Annual aggregation (not per-transaction):
 1. Sum all `RealizedGainEur` from `SaleAllocation` records for the year
@@ -212,7 +220,7 @@ All endpoints prefixed `/api`. All except login require `Authorization: Bearer <
 | POST | `/portfolios/{id}/transactions` | Create buy or sell. Engine computes costs; FIFO runs for sells |
 | PUT | `/portfolios/{id}/transactions/{txId}` | Edit custody fee only |
 | POST | `/transactions/preview` | Compute costs without saving. Body: `{ instrumentId, broker, side, unitPrice, quantity, fxRate, manualBrokerFee? }` |
-| GET | `/portfolios/{id}/holdings` | Open positions with cached market price/value/P&L (null until first refresh) |
+| GET | `/portfolios/{id}/holdings` | Open positions with cached market price/value/P&L (null until first refresh). `unrealizedGainEur` is net of `estimatedSellCostsEur` |
 | POST | `/portfolios/{id}/holdings/refresh-prices` | Fetch live quotes from Yahoo Finance for all held instruments; returns enriched holdings |
 | GET | `/portfolios/{id}/realized?year=YYYY` | Realized gains + annual tax report |
 
@@ -242,6 +250,16 @@ All endpoints prefixed `/api`. All except login require `Authorization: Bearer <
 - **Computed fields persisted** — `AmountEur`, `BrokerFee`, `TobAmount`, etc. are computed at save time and stored. This preserves the cost snapshot even if fee rules change later. Re-derivable from the raw fields.
 - **EUR as reporting currency** — all P/L and tax figures in EUR. Native currency + FxRate stored per transaction.
 - **Manual broker fee override** — `ManualBrokerFee` on a transaction overrides the computed tier (needed for historical data with different fee schedules).
+- **Unrealized P/L is net of exit costs** — the cost basis already includes buy-side fees and TOB, so
+  the market side is charged the estimated sell-side fees and TOB too (see `ExitCostEstimator`). This
+  keeps the figure comparable to `RealizedGainEur`, which is net on both sides. `MarketValueEur` stays
+  gross; `EstimatedSellCostsEur` is surfaced separately on the holding, with the per-broker
+  `ExitCostOrders` breakdown behind it so the UI can show the arithmetic. The buy side is itemised
+  symmetrically: `TotalInvestedEur` splits into `PurchaseAmountEur` + `BuyCostsEur`.
+- **Custody fees are recorded but not costed** — `Transaction.CustodyFee` is captured and stored, but
+  the engine leaves it out of `TotalCost`/`NetProceeds`, so it reaches no P/L or tax figure. It is an
+  annual account charge rather than a per-order acquisition cost; folding it in would need a decision
+  on how to apportion it across positions.
 - **TOB is symmetric** — same rate and cap on buy and sell. The Excel prototype incorrectly hardcoded 0.35% on all sell-side TOB; this implementation uses correct Belgian rates.
 - **Annual cap-gains tax** — the 10% Belgian tax is computed annually with a ~€10,000 exemption and loss offsetting, not per-transaction. The per-sale `RealizedGainEur` on `SaleAllocation` is the pre-tax figure.
 - **Live pricing** — `IPriceProvider` / `IFxRateProvider` abstractions in Application; Yahoo Finance (unofficial, no key) is the only implementation. `InstrumentPrice` table caches one row per instrument (upserted on refresh, not immutable history). FX via Frankfurter/ECB API (keyless). `Instrument.PriceSymbol` caches the resolved Yahoo symbol after first ISIN lookup so repeated refreshes skip the search step.

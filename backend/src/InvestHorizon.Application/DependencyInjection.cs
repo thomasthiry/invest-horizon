@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddSingleton<IFifoMatcher, FifoMatcher>();
         services.AddSingleton<ICapitalGainsTaxService>(_ => new CapitalGainsTaxService(annualTaxExemption));
         services.AddSingleton<TransactionCostEngine>();
+        services.AddSingleton<ExitCostEstimator>();
 
         services.AddScoped<TransactionService>();
         services.AddScoped<HoldingsService>();

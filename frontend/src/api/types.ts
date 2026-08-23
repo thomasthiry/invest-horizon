@@ -41,6 +41,17 @@ export interface Transaction {
   remainingQuantity: number;
 }
 
+// The single sell order one broker would receive to close its share of a position.
+export interface ExitCostOrder {
+  broker: string;
+  quantity: number;
+  unitPriceEur: number;
+  orderValueEur: number;
+  brokerFeeEur: number;
+  tobEur: number;
+  totalEur: number;
+}
+
 export interface Holding {
   instrumentId: string;
   isin: string;
@@ -50,10 +61,19 @@ export interface Holding {
   avgCostEur: number;
   avgCostNative: number;
   totalInvestedEur: number;
+  // totalInvestedEur split in two: the shares themselves, and the broker fees + TOB paid to
+  // acquire them. Both are already inside totalInvestedEur.
+  purchaseAmountEur: number;
+  buyCostsEur: number;
   // Live valuation (null until prices have been refreshed / if a quote is unavailable).
   currentPriceNative: number | null;
   priceCurrency: string | null;
   marketValueEur: number | null;
+  // Broker fees + TOB that closing this position today would cost (one sell order per
+  // broker). Already deducted from unrealizedGainEur.
+  estimatedSellCostsEur: number | null;
+  // Per-broker breakdown behind estimatedSellCostsEur, largest order first.
+  exitCostOrders: ExitCostOrder[] | null;
   unrealizedGainEur: number | null;
   priceAsOf: string | null;
   priceFetchedAt: string | null;

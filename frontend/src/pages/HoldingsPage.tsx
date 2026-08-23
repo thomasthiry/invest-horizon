@@ -23,6 +23,9 @@ const eurExactFormatter = new Intl.NumberFormat(undefined, {
   style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2,
 });
 
+// Quantities can be fractional (Revolut), but trailing zeros just add noise.
+const qtyFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 });
+
 function formatAxisDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
 }
@@ -203,6 +206,7 @@ function UnrealizedSummary({ data }: { data: Holding[] }) {
   const totalInvested = data.reduce((s, h) => s + h.totalInvestedEur, 0);
   const totalMarketValue = data.reduce((s, h) => s + (h.marketValueEur ?? 0), 0);
   const totalUnrealized = data.reduce((s, h) => s + (h.unrealizedGainEur ?? 0), 0);
+  const totalExitCosts = data.reduce((s, h) => s + (h.estimatedSellCostsEur ?? 0), 0);
   // % is measured against the invested amount of the priced positions only, so an
   // unquoted holding cannot dilute the return figure.
   const pricedInvested = priced.reduce((s, h) => s + h.totalInvestedEur, 0);
@@ -239,8 +243,15 @@ function UnrealizedSummary({ data }: { data: Holding[] }) {
         <Group gap={isMobile ? 'lg' : 'xl'}>
           <SummaryStat label="Market value" value={hasPrices ? eurExactFormatter.format(totalMarketValue) : '—'} />
           <SummaryStat label="Invested" value={eurExactFormatter.format(totalInvested)} />
+          <SummaryStat label="Est. exit costs" value={hasPrices ? eurExactFormatter.format(totalExitCosts) : '—'} />
         </Group>
       </Group>
+      {hasPrices && (
+        <Text size="xs" c="dimmed" mt="xs" data-testid="exit-costs-note">
+          Net of {eurExactFormatter.format(totalExitCosts)} estimated exit costs — broker fees + TOB
+          for selling each position in one order per broker.
+        </Text>
+      )}
       {partial && (
         <Text size="xs" c="dimmed" mt="xs">
           Excludes {data.length - priced.length} position(s) without a quote.
@@ -406,13 +417,69 @@ function HoldingRow({ h, onShowChart }: { h: Holding; onShowChart: () => void })
       </Table.Td>
       <Table.Td ta="right" data-testid="unrealized-pl">
         {h.unrealizedGainEur != null
-          ? <PnL value={h.unrealizedGainEur} pct={pnlPct} />
+          ? (
+            <Tooltip
+              multiline
+              w={330}
+              label={<UnrealizedBreakdown h={h} />}
+              disabled={h.marketValueEur == null}
+            >
+              <span><PnL value={h.unrealizedGainEur} pct={pnlPct} /></span>
+            </Tooltip>
+          )
           : <Text c="dimmed">—</Text>}
       </Table.Td>
       <Table.Td ta="center">
         <HoldingSparkline holding={h} onClick={onShowChart} />
       </Table.Td>
     </Table.Tr>
+  );
+}
+
+// Spells out the arithmetic behind a row's unrealized P/L with this position's own numbers:
+// the gross market value, the exit costs it would pay broker by broker, and the cost basis.
+function UnrealizedBreakdown({ h }: { h: Holding }) {
+  const eur = (v: number) => eurExactFormatter.format(v);
+  const orders = h.exitCostOrders ?? [];
+  const exitCosts = h.estimatedSellCostsEur ?? 0;
+
+  return (
+    <Stack gap={8} style={{ fontVariantNumeric: 'tabular-nums' }} data-testid="unrealized-breakdown">
+      <Stack gap={1}>
+        <BreakdownLine label="Market value" value={eur(h.marketValueEur ?? 0)} />
+        <BreakdownLine label="Purchase amount" value={`− ${eur(h.purchaseAmountEur)}`} />
+        <BreakdownLine label="Buy costs (fees + TOB)" value={`− ${eur(h.buyCostsEur)}`} />
+        <BreakdownLine label="Exit costs" value={`− ${eur(exitCosts)}`} />
+        <BreakdownLine label="Unrealized P/L" value={eur(h.unrealizedGainEur ?? 0)} strong />
+      </Stack>
+
+      {orders.length > 0 && (
+        <Stack gap={1}>
+          <Text size="xs" fw={700}>
+            Exit costs · {orders.length === 1 ? '1 sell order' : `${orders.length} sell orders`}
+          </Text>
+          {orders.map(o => (
+            <div key={o.broker}>
+              <Text size="xs">
+                {o.broker}: {qtyFormatter.format(o.quantity)} × {eur(o.unitPriceEur)} = {eur(o.orderValueEur)}
+              </Text>
+              <Text size="xs" pl="sm">
+                fee {eur(o.brokerFeeEur)} + TOB {eur(o.tobEur)} = {eur(o.totalEur)}
+              </Text>
+            </div>
+          ))}
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+function BreakdownLine({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <Group justify="space-between" gap="md" wrap="nowrap">
+      <Text size="xs" fw={strong ? 700 : undefined}>{label}</Text>
+      <Text size="xs" fw={strong ? 700 : undefined}>{value}</Text>
+    </Group>
   );
 }
 
