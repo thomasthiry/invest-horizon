@@ -7,7 +7,9 @@ import { AreaChart } from '@mantine/charts';
 import { instrumentsApi } from '../api/instruments';
 import { transactionsApi } from '../api/transactions';
 import type { Holding } from '../api/types';
-import { MARKER_SERIES, markerAreaProps, withTransactionMarkers } from './transactionMarkers';
+import {
+  ChartTooltipWithTransactions, MARKER_SERIES, markerAreaProps, withTransactionMarkers,
+} from './transactionMarkers';
 import { fromDate, toIsoDate, type Range } from './priceHistoryRange';
 
 const RANGES: { label: string; value: Range }[] = [
@@ -69,6 +71,13 @@ export function InstrumentPriceChartModal({ portfolioId, holding, onClose }: Pro
     : undefined;
   const chartData = withTransactionMarkers(points, ownTransactions, p => p.close);
 
+  const currency = data?.[0]?.currency ?? holding?.currency;
+  const chartSeries = [
+    { name: 'close', label: `Price (${currency})`, color: 'teal.6' },
+    ...MARKER_SERIES,
+  ];
+  const valueFormatter = (v: number) => `${v.toFixed(2)} ${currency ?? ''}`;
+
   return (
     <Modal
       opened={!!holding}
@@ -112,10 +121,7 @@ export function InstrumentPriceChartModal({ portfolioId, holding, onClose }: Pro
             h={320}
             data={chartData}
             dataKey="date"
-            series={[
-              { name: 'close', label: `Price (${data[0]?.currency ?? holding?.currency})`, color: 'teal.6' },
-              ...MARKER_SERIES,
-            ]}
+            series={chartSeries}
             curveType="monotone"
             withDots
             withGradient
@@ -129,7 +135,17 @@ export function InstrumentPriceChartModal({ portfolioId, holding, onClose }: Pro
               width: 70,
               domain: priceDomain(points.map(p => p.close), holding?.avgCostNative ?? 0),
             }}
-            valueFormatter={(v) => `${v.toFixed(2)} ${data[0]?.currency ?? ''}`}
+            valueFormatter={valueFormatter}
+            tooltipProps={{
+              content: ({ label, payload }) => (
+                <ChartTooltipWithTransactions
+                  label={label}
+                  payload={payload}
+                  series={chartSeries}
+                  valueFormatter={valueFormatter}
+                />
+              ),
+            }}
             areaProps={(series) => markerAreaProps(series) ?? { dot: false }}
           />
         )}

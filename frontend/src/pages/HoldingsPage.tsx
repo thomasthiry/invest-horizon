@@ -10,7 +10,9 @@ import { transactionsApi } from '../api/transactions';
 import type { Holding, ValuationPoint } from '../api/types';
 import { HoldingSparkline } from './HoldingSparkline';
 import { InstrumentPriceChartModal } from './InstrumentPriceChartModal';
-import { MARKER_SERIES, markerAreaProps, withTransactionMarkers } from './transactionMarkers';
+import {
+  ChartTooltipWithTransactions, MARKER_SERIES, markerAreaProps, withTransactionMarkers,
+} from './transactionMarkers';
 
 interface Props { portfolioId: string; }
 
@@ -141,6 +143,17 @@ function ValuationChart({ portfolioId }: Props) {
         withGradient
         referenceLines={refLines}
         valueFormatter={valueFormatter}
+        tooltipProps={{
+          content: ({ label, payload }) => (
+            <ChartTooltipWithTransactions
+              label={label}
+              payload={payload}
+              series={[...seriesConfig[mode], ...MARKER_SERIES]}
+              valueFormatter={valueFormatter}
+              withInstrument
+            />
+          ),
+        }}
         xAxisProps={{ tickFormatter: formatAxisDate, minTickGap: isMobile ? 20 : 40 }}
         yAxisProps={{ width: isMobile ? 50 : 70 }}
         areaProps={(series) => markerAreaProps(series) ?? {
