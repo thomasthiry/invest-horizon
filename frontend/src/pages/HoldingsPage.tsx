@@ -18,6 +18,11 @@ const eurFormatter = new Intl.NumberFormat(undefined, {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
 });
 
+// Headline figures: same precision as the holdings table, so the two always agree.
+const eurExactFormatter = new Intl.NumberFormat(undefined, {
+  style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2,
+});
+
 function formatAxisDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
 }
@@ -182,11 +187,74 @@ export function HoldingsPage({ portfolioId }: Props) {
 
   return (
     <Stack>
+      {data && data.length > 0 && <UnrealizedSummary data={data} />}
       <ValuationChart portfolioId={portfolioId} />
       {isLoading ? <Loader />
         : error ? <Alert color="red">Failed to load holdings.</Alert>
         : !data || data.length === 0 ? <Text c="dimmed">No open positions.</Text>
         : <HoldingsSection portfolioId={portfolioId} data={data} refresh={refresh} inflationBaseline={inflationBaseline} />}
+    </Stack>
+  );
+}
+
+function UnrealizedSummary({ data }: { data: Holding[] }) {
+  const isMobile = useMediaQuery('(max-width: 48em)');
+  const priced = data.filter(h => h.marketValueEur != null);
+  const totalInvested = data.reduce((s, h) => s + h.totalInvestedEur, 0);
+  const totalMarketValue = data.reduce((s, h) => s + (h.marketValueEur ?? 0), 0);
+  const totalUnrealized = data.reduce((s, h) => s + (h.unrealizedGainEur ?? 0), 0);
+  // % is measured against the invested amount of the priced positions only, so an
+  // unquoted holding cannot dilute the return figure.
+  const pricedInvested = priced.reduce((s, h) => s + h.totalInvestedEur, 0);
+  const pct = pricedInvested > 0 ? (totalUnrealized / pricedInvested) * 100 : null;
+  const hasPrices = priced.length > 0;
+  const partial = hasPrices && priced.length < data.length;
+
+  const color = !hasPrices ? 'dimmed' : totalUnrealized > 0 ? 'teal' : totalUnrealized < 0 ? 'red' : undefined;
+  const sign = totalUnrealized > 0 ? '+' : '';
+
+  return (
+    <Paper withBorder radius="md" p={isMobile ? 'md' : 'lg'} data-testid="unrealized-summary">
+      <Group justify="space-between" align="flex-end" wrap="wrap" gap="lg">
+        <Stack gap={2}>
+          <Text size="sm" c="dimmed" fw={600} tt="uppercase">Total unrealized P/L</Text>
+          {hasPrices ? (
+            <Group align="baseline" gap="sm" wrap="nowrap">
+              <Text fz={isMobile ? 34 : 48} fw={700} lh={1.1} c={color} data-testid="unrealized-summary-value">
+                {sign}{eurExactFormatter.format(totalUnrealized)}
+              </Text>
+              {pct != null && (
+                <Text fz={isMobile ? 18 : 24} fw={600} c={color}>
+                  {sign}{pct.toFixed(2)}%
+                </Text>
+              )}
+            </Group>
+          ) : (
+            <Text fz={isMobile ? 24 : 32} fw={700} lh={1.1} c="dimmed">
+              — <Text span size="sm" fw={400}>refresh prices to value this portfolio</Text>
+            </Text>
+          )}
+        </Stack>
+
+        <Group gap={isMobile ? 'lg' : 'xl'}>
+          <SummaryStat label="Market value" value={hasPrices ? eurExactFormatter.format(totalMarketValue) : '—'} />
+          <SummaryStat label="Invested" value={eurExactFormatter.format(totalInvested)} />
+        </Group>
+      </Group>
+      {partial && (
+        <Text size="xs" c="dimmed" mt="xs">
+          Excludes {data.length - priced.length} position(s) without a quote.
+        </Text>
+      )}
+    </Paper>
+  );
+}
+
+function SummaryStat({ label, value }: { label: string; value: string }) {
+  return (
+    <Stack gap={0}>
+      <Text size="xs" c="dimmed">{label}</Text>
+      <Text fz="lg" fw={600}>{value}</Text>
     </Stack>
   );
 }
